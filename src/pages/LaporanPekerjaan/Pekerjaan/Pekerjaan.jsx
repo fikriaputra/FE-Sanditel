@@ -1,17 +1,24 @@
-// src/pages/Pekerjaan.jsx
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout2 from "../../../layouts/MainLayout2";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import Table from "../../../components/ManajemenInventory/DataBarang/Table";
 import TableRowPK from "../../../components/LaporanPekerjaan/Pekerjaan/TableRowPK";
-import { Plus, Trash2, Pencil } from "lucide-react";
 import "../../../index.css";
+import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
 export default function Pekerjaan() {
   const navigate = useNavigate();
 
-  // State
   const [search, setSearch] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false); // Menambahkan state untuk membuka/tutup filter mobile
+
+  const [filters, setFilters] = useState({
+    JenisPekerjaan: [],
+    Bagian: [],
+    Status: [],
+  });
+
   const [dataPekerjaan, setDataPekerjaan] = useState([
     {
       No: 1,
@@ -49,17 +56,42 @@ export default function Pekerjaan() {
     "Aksi",
   ];
 
-  // Filter pencarian
+  const customFilters = [
+    {
+      name: "JenisPekerjaan",
+      label: "Jenis Pekerjaan",
+      options: ["Instalasi", "Maintenance", "Troubleshooting"],
+    },
+    {
+      name: "Bagian",
+      label: "Bagian",
+      options: ["CCTV", "Internet", "Telepon"],
+    },
+    {
+      name: "Status",
+      label: "Status",
+      options: ["Dikerjakan", "Selesai", "Tidak Dikerjakan"],
+    },
+  ];
+
+  // Filter berdasarkan pencarian dan filter yang dipilih
   const filteredData = useMemo(() => {
-    return dataPekerjaan.filter((pekerjaan) =>
-      Object.values(pekerjaan)
+    return dataPekerjaan.filter((pekerjaan) => {
+      const searchMatch = Object.values(pekerjaan)
         .join(" ")
         .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  }, [dataPekerjaan, search]);
+        .includes(search.toLowerCase());
 
-  // Badge status (untuk mobile card)
+      const filterMatch = Object.keys(filters).every((filterName) => {
+        if (filters[filterName].length === 0) return true;
+        return filters[filterName].includes(pekerjaan[filterName]);
+      });
+
+      return searchMatch && filterMatch;
+    });
+  }, [dataPekerjaan, search, filters]);
+
+  // Badge untuk status
   const getSubmissionBadge = (status) => {
     switch (status.toLowerCase()) {
       case "selesai":
@@ -73,9 +105,8 @@ export default function Pekerjaan() {
     }
   };
 
-  // Handlers
+  // Handlers untuk menambah, mengedit, dan menghapus data
   const handleTambah = () => navigate("/add-pekerjaan");
-
   const handleDelete = (item) => {
     if (
       window.confirm(`Yakin ingin menghapus pekerjaan: ${item.JenisPekerjaan}?`)
@@ -85,15 +116,29 @@ export default function Pekerjaan() {
   };
 
   const handleEdit = (item) => {
-    // sementara pakai halaman add-pekerjaan sebagai form edit
-    // nanti di AddPekerjaan bisa dibedain lewat state.mode === "edit"
     navigate("/edit-pekerjaan", { state: { mode: "edit", data: item } });
+  };
+
+  // Fungsi untuk mengubah state filter
+  const handleFilterChange = (filterName, value) => {
+    setFilters((prevFilters) => {
+      const updatedFilters = { ...prevFilters };
+      const selectedFilter = updatedFilters[filterName];
+      if (selectedFilter.includes(value)) {
+        updatedFilters[filterName] = selectedFilter.filter(
+          (item) => item !== value
+        );
+      } else {
+        updatedFilters[filterName] = [...selectedFilter, value];
+      }
+      return updatedFilters;
+    });
   };
 
   return (
     <MainLayout2>
       <div className="bg-white p-3 sm:p-6 rounded-lg shadow">
-        {/* Header */}
+        {/* Header dan Search */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
           <h2 className="font-bold text-lg sm:text-xl">Daftar Pekerjaan</h2>
           <div className="flex items-center gap-2 flex-wrap">
@@ -107,7 +152,7 @@ export default function Pekerjaan() {
           </div>
         </div>
 
-        {/* Search (Mobile) */}
+        {/* Mobile Search Bar */}
         <div className="sm:hidden mb-4 relative">
           <input
             type="text"
@@ -131,7 +176,58 @@ export default function Pekerjaan() {
           </svg>
         </div>
 
-        {/* Card Mobile */}
+        {/* Mobile View: Filter Sections */}
+        <div className="sm:hidden mb-4">
+          <button
+            type="button"
+            onClick={() => setIsFilterOpen((prev) => !prev)} // Mengubah state filter
+            className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
+          >
+            Filter
+            <span className="text-xs">▼</span>
+          </button>
+
+          {isFilterOpen && (
+            <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
+              <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
+              {customFilters.map((filter) => (
+                <div key={filter.name} className="border border-gray-200 rounded-lg p-3 mb-3">
+                  <div className="text-xs font-semibold text-gray-700 mb-2">
+                    {filter.label}
+                  </div>
+                  <div className="max-h-40 overflow-y-auto">
+                    {filter.options.map((opt) => (
+                      <label
+                        key={opt}
+                        className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={filters[filter.name]?.includes(opt)}
+                          onChange={() => handleFilterChange(filter.name, opt)}
+                          className="rounded border-gray-300"
+                        />
+                        {opt}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsFilterOpen(false)} // Menutup filter setelah diterapkan
+                  className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
+                >
+                  Terapkan
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile View: Cards */}
         <div className="space-y-3 sm:hidden">
           {filteredData.length > 0 ? (
             filteredData.map((item) => (
@@ -157,14 +253,13 @@ export default function Pekerjaan() {
                   Petugas: <span className="font-medium">{item.Petugas}</span>
                 </p>
 
-                {/* Status dengan badge warna */}
+                {/* Status with badge */}
                 <p className="text-sm text-gray-600 flex items-center gap-2">
                   Status:{" "}
-                  <span className={getSubmissionBadge(item.Status)}>
-                    {item.Status}
-                  </span>
+                  <span className={getSubmissionBadge(item.Status)}>{item.Status}</span>
                 </p>
 
+                {/* Actions */}
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => handleDelete(item)}
@@ -173,7 +268,7 @@ export default function Pekerjaan() {
                     <Trash2 size={14} /> Hapus
                   </button>
 
-                  {/* tombol Edit ganti Approve */}
+                  {/* Edit button */}
                   {item.Status.toLowerCase() === "dikerjakan" && (
                     <button
                       onClick={() => handleEdit(item)}
@@ -192,15 +287,20 @@ export default function Pekerjaan() {
           )}
         </div>
 
-        {/* Tabel Desktop */}
+        {/* Desktop View: Table */}
         <div id="printArea" className="hidden sm:block overflow-x-auto">
-          <Table headers={headers} search={search} setSearch={setSearch}>
+          <Table
+            headers={headers}
+            search={search}
+            setSearch={setSearch}
+            customFilters={customFilters} // Menambahkan filter di sini
+          >
             {filteredData.length > 0 ? (
               filteredData.map((item) => (
                 <TableRowPK
                   key={item.No}
                   item={item}
-                  onEdit={() => handleEdit(item)}   // ⬅ pakai Edit, bukan Approve
+                  onEdit={() => handleEdit(item)}
                   onDelete={() => handleDelete(item)}
                 />
               ))

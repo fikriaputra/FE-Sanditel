@@ -1,13 +1,65 @@
-// components/Table.jsx
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import React from "react";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
-export default function Table({ headers, children, pagination = true }) {
+// Untuk komponen Filter dengan scroll vertikal dan tampilan responsif
+export default function Table({
+  headers,
+  children,
+  pagination = true,
+  customFilters = [],
+}) {
   const [search, setSearch] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // --- STATE FOR FILTERS ---
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({});
+
+  // --- Initialize filters based on customFilters passed from parent ---
+  useEffect(() => {
+    // Initialize filters only when customFilters change, not on every render
+    if (customFilters.length) {
+      const initialFilters = customFilters.reduce((acc, filter) => {
+        // Initialize each filter with an empty array
+        acc[filter.name] = [];
+        return acc;
+      }, {});
+      setFilters((prevFilters) => {
+        // Only update state if the filters haven't been initialized yet
+        if (JSON.stringify(prevFilters) !== JSON.stringify(initialFilters)) {
+          return initialFilters;
+        }
+        return prevFilters;
+      });
+    }
+  }, [customFilters]); // Only run when customFilters prop changes
+
+  // Toggle filter option in the filters state
+  const toggleFilterOption = (columnName, value) => {
+    setFilters((prevFilters) => {
+      const newFilters = { ...prevFilters };
+      const currentFilter = newFilters[columnName] || [];
+
+      if (currentFilter.includes(value)) {
+        // Remove filter option if already selected
+        newFilters[columnName] = currentFilter.filter((item) => item !== value);
+      } else {
+        // Add filter option if not selected
+        newFilters[columnName] = [...currentFilter, value];
+      }
+
+      return newFilters;
+    });
+  };
+
+  // Apply filters and reset to the first page
+  const handleApplyFilter = () => {
+    setIsFilterOpen(false);
+    setCurrentPage(1); // Reset to the first page after applying filters
+  };
 
   // Sorting handler
   const handleSort = (index) => {
@@ -18,30 +70,50 @@ export default function Table({ headers, children, pagination = true }) {
     setSortConfig({ key: index, direction });
   };
 
-  // Filtering + Sorting
+  // Filtering + Sorting logic
   const filteredRows = React.Children.toArray(children)
     .filter((child) => {
       if (!child) return false;
 
-      // 🔹 Ambil data untuk pencarian
-      let searchableContent = "";
+      // Get the row values
+      let rowValues = [];
       if (child.props?.item) {
-        searchableContent = Object.values(child.props.item).join(" ");
+        rowValues = Object.values(child.props.item);
       } else if (child.props?.children) {
-        searchableContent = React.Children.toArray(child.props.children)
-          .map((td) =>
-            typeof td === "string"
-              ? td
-              : td?.props?.children
-              ? (Array.isArray(td.props.children)
-                  ? td.props.children.join(" ")
-                  : td.props.children)
-              : ""
-          )
-          .join(" ");
+        rowValues = React.Children.toArray(child.props.children).map((td) => {
+          if (typeof td === "string") return td;
+          if (td?.props?.children) {
+            return Array.isArray(td.props.children)
+              ? td.props.children.join(" ")
+              : td.props.children;
+          }
+          return "";
+        });
       }
 
-      return searchableContent.toLowerCase().includes(search.toLowerCase());
+      const stringValues = rowValues.map((v) => String(v));
+
+      // --- SEARCH ---
+      const searchableContent = stringValues.join(" ");
+      const matchesSearch = searchableContent
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
+      // --- FILTERS (Check the selected filter values) ---
+      let isMatch = true;
+      for (let columnName in filters) {
+        const filterValues = filters[columnName];
+        if (filterValues.length > 0) {
+          const columnIndex = headers.indexOf(columnName);
+          const columnValue = stringValues[columnIndex];
+          if (!filterValues.includes(columnValue)) {
+            isMatch = false;
+            break;
+          }
+        }
+      }
+
+      return matchesSearch && isMatch;
     })
     .sort((a, b) => {
       if (!sortConfig.key && !sortConfig.direction) return 0;
@@ -55,18 +127,18 @@ export default function Table({ headers, children, pagination = true }) {
       } else if (a.props?.children && b.props?.children) {
         const aChildren = React.Children.toArray(a.props.children);
         const bChildren = React.Children.toArray(b.props.children);
-        aValue =
-          aChildren[sortConfig.key]?.props?.children ||
-          (Array.isArray(aChildren[sortConfig.key]?.props?.children)
-            ? aChildren[sortConfig.key]?.props?.children.join(" ")
-            : aChildren[sortConfig.key]?.props?.children) ||
-          "";
-        bValue =
-          bChildren[sortConfig.key]?.props?.children ||
-          (Array.isArray(bChildren[sortConfig.key]?.props?.children)
-            ? bChildren[sortConfig.key]?.props?.children.join(" ")
-            : bChildren[sortConfig.key]?.props?.children) ||
-          "";
+        const aChild = aChildren[sortConfig.key];
+        const bChild = bChildren[sortConfig.key];
+
+        const aChildVal = aChild?.props?.children;
+        const bChildVal = bChild?.props?.children;
+
+        aValue = Array.isArray(aChildVal)
+          ? aChildVal.join(" ")
+          : aChildVal || "";
+        bValue = Array.isArray(bChildVal)
+          ? bChildVal.join(" ")
+          : bChildVal || "";
       }
 
       if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
@@ -92,44 +164,58 @@ export default function Table({ headers, children, pagination = true }) {
     <div className="w-full px-2 sm:px-0">
       {/* Top Controls */}
       <div className="mb-4 flex flex-col md:flex-row justify-between items-center gap-3">
-        {/* Rows per page dropdown → hanya tampil kalau pagination aktif */}
-        {pagination && (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-700 font-medium">Show</span>
-            <div className="relative">
-              <select
-                value={rowsPerPage}
-                onChange={(e) => {
-                  setRowsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="appearance-none bg-transparent border-b-2 border-gray-300 
-                         focus:border-blue-500 outline-none px-1 py-1 pr-6 text-gray-800 
-                         font-medium transition-all duration-200 text-sm"
-              >
-                {[10, 25, 50, 100].map((num) => (
-                  <option key={num} value={num}>
-                    {num}
-                  </option>
-                ))}
-              </select>
-              <svg
-                className="absolute right-1 top-2 w-4 h-4 text-gray-500 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+        {/* FILTER DROPDOWN */}
+        <div className="relative w-full md:w-auto self-start">
+          <button
+            type="button"
+            onClick={() => setIsFilterOpen((prev) => !prev)}
+            className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
+          >
+            Filter
+            <span className="text-xs">▼</span>
+          </button>
+
+          {isFilterOpen && (
+            <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
+              <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
+
+              {/* Render dynamic filters for each custom filter passed to Table */}
+              {customFilters.map((filter) => (
+                <div key={filter.name} className="border border-gray-200 rounded-lg p-3 mb-3">
+                  <div className="text-xs font-semibold text-gray-700 mb-2">
+                    {filter.label}
+                  </div>
+                  <div className="max-h-40 overflow-y-auto"> {/* Scrollable container */}
+                    {filter.options.map((opt) => (
+                      <label
+                        key={opt}
+                        className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={filters[filter.name]?.includes(opt)}
+                          onChange={() => toggleFilterOption(filter.name, opt)}
+                          className="rounded border-gray-300"
+                        />
+                        {opt}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleApplyFilter}
+                  className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
+                >
+                  Apply
+                </button>
+              </div>
             </div>
-            <span className="text-gray-700 font-medium">data</span>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Search bar */}
         <div className="relative w-full md:w-[25%]">
@@ -138,22 +224,8 @@ export default function Table({ headers, children, pagination = true }) {
             placeholder="Cari data..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm 
-                       focus:outline-none transition text-sm"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none transition text-sm"
           />
-          <svg
-            className="absolute right-3 top-3 w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z"
-            />
-          </svg>
         </div>
       </div>
 
@@ -201,63 +273,99 @@ export default function Table({ headers, children, pagination = true }) {
         </table>
       </div>
 
-      {/* Bottom Controls → hanya kalau pagination aktif */}
+      {/* Bottom Controls */}
       {pagination && (
-        <div
-          className="flex flex-col md:flex-row justify-between items-center mt-3 
-                      text-xs sm:text-sm text-gray-600 gap-2"
-        >
-          {/* Info text */}
-          <span>
-            Show {totalRows === 0 ? 0 : startIndex + 1} to{" "}
-            {Math.min(endIndex, totalRows)} from {totalRows} data
-          </span>
+        <div className="mt-3 text-xs sm:text-sm text-gray-600">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-2">
+            <span>
+              Show {totalRows === 0 ? 0 : startIndex + 1} to{" "}
+              {Math.min(endIndex, totalRows)} from {totalRows} data
+            </span>
 
-          {/* Pagination */}
-          <div className="flex gap-1 sm:gap-2 mt-2 md:mt-0 overflow-x-auto">
-            <button
-              onClick={() => handlePageChange(1)}
-              disabled={currentPage === 1}
-              className="px-1.5 sm:px-2 py-1 border rounded disabled:opacity-50 text-xs sm:text-sm"
-            >
-              First
-            </button>
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-1.5 sm:px-2 py-1 border rounded disabled:opacity-50 text-xs sm:text-sm"
-            >
-              Previous
-            </button>
-
-            {[...Array(totalPages)].map((_, idx) => (
+            <div className="flex gap-1 sm:gap-2 mt-2 md:mt-0 overflow-x-auto">
               <button
-                key={idx}
-                onClick={() => handlePageChange(idx + 1)}
-                className={`px-1.5 sm:px-2 py-1 border rounded text-xs sm:text-sm ${
-                  currentPage === idx + 1
-                    ? "bg-blue-500 text-white"
-                    : "hover:bg-gray-200"
-                }`}
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className="px-1.5 sm:px-2 py-1 border rounded disabled:opacity-50 text-xs sm:text-sm"
               >
-                {idx + 1}
+                First
               </button>
-            ))}
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-1.5 sm:px-2 py-1 border rounded disabled:opacity-50 text-xs sm:text-sm"
+              >
+                Previous
+              </button>
 
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="px-1.5 sm:px-2 py-1 border rounded disabled:opacity-50 text-xs sm:text-sm"
-            >
-              Next
-            </button>
-            <button
-              onClick={() => handlePageChange(totalPages)}
-              disabled={currentPage === totalPages}
-              className="px-1.5 sm:px-2 py-1 border rounded disabled:opacity-50 text-xs sm:text-sm"
-            >
-              Last
-            </button>
+              {[...Array(totalPages)].map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handlePageChange(idx + 1)}
+                  className={`px-1.5 sm:px-2 py-1 border rounded text-xs sm:text-sm ${
+                    currentPage === idx + 1
+                      ? "bg-blue-500 text-white"
+                      : "hover:bg-gray-200"
+                  }`}
+                >
+                  {idx + 1}
+                </button>
+              ))}
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-1.5 sm:px-2 py-1 border rounded disabled:opacity-50 text-xs sm:text-sm"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-1.5 sm:px-2 py-1 border rounded disabled:opacity-50 text-xs sm:text-sm"
+              >
+                Last
+              </button>
+            </div>
+          </div>
+
+          {/* Show data move to bottom-center */}
+          <div className="mt-3 flex justify-center">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-700 font-medium">Show</span>
+              <div className="relative">
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => {
+                    setRowsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="appearance-none bg-transparent border-b-2 border-gray-300 
+                             focus:border-blue-500 outline-none px-1 py-1 pr-6 text-gray-800 
+                             font-medium transition-all duration-200 text-sm"
+                >
+                  {[10, 25, 50, 100].map((num) => (
+                    <option key={num} value={num}>
+                      {num}
+                    </option>
+                  ))}
+                </select>
+                <svg
+                  className="absolute right-1 top-2 w-4 h-4 text-gray-500 pointer-events-none"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+              <span className="text-gray-700 font-medium">data</span>
+            </div>
           </div>
         </div>
       )}

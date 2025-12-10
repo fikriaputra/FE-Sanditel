@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom"; // Added useLocation and useParams
 import LoginInput from "./LoginInput";
 
 const LoginForm = ({ onLogin, loading, error, goRegister }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { menuId: menuIdParam } = useParams(); // Get menuId from URL params
+
+  // Prioritize the menuId from location.state, fallback to the URL params
+  const menuIdFromLocation = location.state?.menuId || menuIdParam;
+  const menuId = menuIdFromLocation || 1; // Default to 1 if menuId is not available
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -12,7 +19,20 @@ const LoginForm = ({ onLogin, loading, error, goRegister }) => {
     if (!email || !password) {
       return onLogin({ error: "Email dan password wajib diisi !!" });
     }
+
+    // Call onLogin function with email and password
     onLogin({ email, password });
+
+    // Redirect to the appropriate page after login
+    const redirectMap = {
+      1: "/dashboard", // Menu 1 redirects to dashboard
+      2: "/dashboard-laporan", // Menu 2 redirects to dashboard-laporan
+      // Add other menu options here
+    };
+
+    const redirectTo = redirectMap[menuId] || "/menu"; // Default to /menu if no match
+
+    navigate(redirectTo, { replace: true }); // Redirect after login
   };
 
   return (
@@ -65,7 +85,7 @@ const LoginForm = ({ onLogin, loading, error, goRegister }) => {
 
       {/* Forgot Password */}
       <div
-        onClick={() => navigate("/forgot-password")}
+        onClick={() => navigate(`/forgot-password/${menuId}`, { replace: true })} // Pass menuId in URL
         className="text-xs sm:text-sm text-right text-blue-500 hover:underline cursor-pointer"
       >
         Forgot password?

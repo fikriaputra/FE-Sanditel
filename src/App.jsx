@@ -55,6 +55,7 @@ import EditMaintenance3 from "./pages/LaporanPekerjaan/Maintenance/EditMainTenan
 import AdminDashboardPekerjaan from "./pages/AdminPekerjaan/AdminDashboardPekerjaan";
 import AdminMaintenance from "./pages/AdminPekerjaan/AdminMaintenance";
 import DetailMaintenance from "./components/LaporanPekerjaan/Maintenance/DetailMaintenance";
+import AdminDetailMaintenance from "./pages/AdminPekerjaan/AdminDetailMaintenance";
 
 
 // 🔹 Animated wrapper
@@ -108,11 +109,11 @@ function AnimatedRoutes() {
           element={withAnimation("/login", <LoginPage />)}
         />
         <Route
-          path="/register"
+          path="/register/:menuId"
           element={withAnimation("/register", <RegisterPage />, -1)}
         />
         <Route
-          path="/forgot-password"
+          path="/forgot-password/:menuId"
           element={withAnimation("/forgot-password", <ForgotPasswordPage />)}
         />
 
@@ -156,10 +157,8 @@ function AnimatedRoutes() {
         <Route path="/edit-maintenance" element={<EditMaintenance />} />
         <Route path="/edit-maintenance2" element={<EditMaintenance2 />} />
         <Route path="/edit-maintenance3" element={<EditMaintenance3 />} />
-        <Route
-          path="/detail-maintenance/:id"
-          element={<DetailMaintenance />}
-        />
+        <Route path="/detail-maintenance/:id" element={<DetailMaintenance />} />
+        <Route path="admin-detail-maintenance/:id" element={<AdminDetailMaintenance />} />
 
         {/* Pengajuan Barang */}
         <Route path="/pengajuan-barang" element={<PengajuanBarang />} />

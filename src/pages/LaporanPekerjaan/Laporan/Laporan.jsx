@@ -1,4 +1,3 @@
-// src/pages/Laporan.jsx
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout2 from "../../../layouts/MainLayout2";
@@ -12,6 +11,15 @@ export default function Laporan() {
 
   // State
   const [search, setSearch] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false); // Add state for mobile filter visibility
+
+  const [filters, setFilters] = useState({
+    JenisPekerjaan: [],
+    Bagian: [],
+    Status: [],
+  });
+
+  // Data laporan
   const [dataLaporan, setDataLaporan] = useState([
     {
       No: 1,
@@ -39,6 +47,7 @@ export default function Laporan() {
     },
   ]);
 
+  // Headers tabel
   const headers = [
     "No",
     "Hari Tanggal",
@@ -49,20 +58,27 @@ export default function Laporan() {
     "Aksi",
   ];
 
-  // Filter pencarian
+  // Filter pencarian dan filter berdasarkan kategori
   const filteredData = useMemo(() => {
-    return dataLaporan.filter((laporan) =>
-      Object.values(laporan)
+    return dataLaporan.filter((laporan) => {
+      const searchMatch = Object.values(laporan)
         .join(" ")
         .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  }, [dataLaporan, search]);
+        .includes(search.toLowerCase());
+
+      const filterMatch = Object.keys(filters).every((filterName) => {
+        if (filters[filterName].length === 0) return true;
+        return filters[filterName].includes(laporan[filterName]);
+      });
+
+      return searchMatch && filterMatch;
+    });
+  }, [dataLaporan, search, filters]);
 
   // Handler untuk navigasi ke detail laporan
   const handleView = (item) => navigate(`/detail-laporan/${item.No}`);
 
-  // Badge status (sama dengan TableRowPK/LP style tegas)
+  // Badge status
   const getStatusBadge = (status) => {
     if (!status) return null;
     switch (status.toLowerCase()) {
@@ -86,6 +102,41 @@ export default function Laporan() {
         );
     }
   };
+
+  // Fungsi untuk mengubah filter
+  const handleFilterChange = (filterName, value) => {
+    setFilters((prevFilters) => {
+      const updatedFilters = { ...prevFilters };
+      const selectedFilter = updatedFilters[filterName];
+      if (selectedFilter.includes(value)) {
+        updatedFilters[filterName] = selectedFilter.filter(
+          (item) => item !== value
+        );
+      } else {
+        updatedFilters[filterName] = [...selectedFilter, value];
+      }
+      return updatedFilters;
+    });
+  };
+
+  // Definisikan custom filters untuk Table
+  const customFilters = [
+    {
+      name: "JenisPekerjaan",
+      label: "Jenis Pekerjaan",
+      options: ["Instalasi", "Maintenance", "Troubleshooting"],
+    },
+    {
+      name: "Bagian",
+      label: "Bagian",
+      options: ["CCTV", "Internet", "Telepon"],
+    },
+    {
+      name: "Status",
+      label: "Status",
+      options: ["Selesai", "Dikerjakan", "Tidak Dikerjakan"],
+    },
+  ];
 
   return (
     <MainLayout2>
@@ -117,6 +168,59 @@ export default function Laporan() {
               d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z"
             />
           </svg>
+        </div>
+
+        {/* Filter Mobile (Same as Desktop) */}
+        <div className="sm:hidden mb-4">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
+            >
+              Filter
+              <span className="text-xs">▼</span>
+            </button>
+
+            {isFilterOpen && (
+              <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
+                <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
+                {customFilters.map((filter) => (
+                  <div key={filter.name} className="border border-gray-200 rounded-lg p-3 mb-3">
+                    <div className="text-xs font-semibold text-gray-700 mb-2">
+                      {filter.label}
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {filter.options.map((opt) => (
+                        <label
+                          key={opt}
+                          className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filters[filter.name]?.includes(opt)}
+                            onChange={() => handleFilterChange(filter.name, opt)}
+                            className="rounded border-gray-300"
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)} // Close the filter modal after applying filters
+                    className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Card Mobile */}
@@ -167,7 +271,12 @@ export default function Laporan() {
 
         {/* Tabel Desktop */}
         <div id="printArea" className="hidden sm:block overflow-x-auto">
-          <Table headers={headers} search={search} setSearch={setSearch}>
+          <Table
+            headers={headers}
+            search={search}
+            setSearch={setSearch}
+            customFilters={customFilters}
+          >
             {filteredData.length > 0 ? (
               filteredData.map((item) => (
                 <TableRowLP

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate, useLocation, useParams } from "react-router-dom";  // Import useNavigate, useLocation, useParams
 import LoginInput from "./LoginInput";
 
 const RegisterForm = ({ onRegister, loading, error, message, goLogin }) => {
@@ -10,6 +11,14 @@ const RegisterForm = ({ onRegister, loading, error, message, goLogin }) => {
     password: "",
     confirmPassword: "",
   });
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { menuId: menuIdParam } = useParams(); // Get menuId from URL params
+
+  // Use menuId from location.state if available, otherwise fallback to URL params
+  const menuIdFromLocation = location.state?.menuId || menuIdParam;
+  const menuId = menuIdFromLocation || 1;  // Default to 1 if menuId is missing
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -33,6 +42,11 @@ const RegisterForm = ({ onRegister, loading, error, message, goLogin }) => {
     }
 
     onRegister(form); // kirim data ke parent
+
+    // Remove immediate navigation and only show success message
+    setTimeout(() => {
+      setMessage("Akun berhasil dibuat!"); // Show the success message
+    }, 1500);  // Simulate a delay before showing the success message
   };
 
   return (
@@ -143,7 +157,7 @@ const RegisterForm = ({ onRegister, loading, error, message, goLogin }) => {
       <div className="text-xs sm:text-sm text-center text-gray-500">
         Sudah punya akun?{" "}
         <span
-          onClick={goLogin}
+          onClick={() => navigate(`/login/${menuId}`, { replace: true })}  // Navigating to login page with menuId
           className="cursor-pointer text-blue-500 hover:underline"
         >
           Sign In

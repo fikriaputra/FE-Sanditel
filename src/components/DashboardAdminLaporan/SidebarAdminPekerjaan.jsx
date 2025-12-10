@@ -51,7 +51,7 @@ export default function SidebarAdminPekerjaan() {
           className="p-4 text-lg font-bold border-b flex items-center gap-2 cursor-pointer"
           onClick={() => {
             setIsOpen(false);
-            navigate("/Admin");
+            navigate("/menu");
           }}
         >
           <img

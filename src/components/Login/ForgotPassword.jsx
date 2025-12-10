@@ -1,30 +1,36 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useNavigate, useLocation, useParams } from "react-router-dom";  // Import necessary hooks
 
-export default function ForgotPassword({ onSubmit }) {
+export default function ForgotPassword({ onSubmit, error }) {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();  // Get location from the URL
+  const { menuId: menuIdParam } = useParams(); // Get menuId from URL params (if exists)
+
+  // Use menuId from location.state if available, otherwise fallback to URL params
+  const menuIdFromLocation = location.state?.menuId || menuIdParam;
+
+  // If menuId is not found, fallback to default value (1)
+  const menuId = menuIdFromLocation || 1;  // Default to 1 if not found
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setMessage(""); // reset pesan
-    setLoading(true); // mulai loading
+    setMessage(""); // Reset message
+    setLoading(true); // Start loading
 
-    // Simulasi delay seperti API call
     setTimeout(() => {
-      setLoading(false); // selesai loading
-      if (onSubmit) onSubmit(email); // panggil handler parent
+      setLoading(false); // End loading
+      if (onSubmit) onSubmit(email);
       setMessage("Jika email terdaftar, link reset password telah dikirim.");
-    }, 1500); // simulasi 1.5 detik
+    }, 1500); // Simulate API call delay
   };
 
   return (
     <motion.div
-      className="flex flex-col justify-center items-center w-full max-w-md mx-auto 
-                 bg-white p-8 rounded-2xl shadow-md"
+      className="flex flex-col justify-center items-center w-full max-w-md mx-auto bg-white p-8 rounded-2xl shadow-md"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
@@ -35,7 +41,19 @@ export default function ForgotPassword({ onSubmit }) {
         Masukkan email akun Anda untuk menerima instruksi reset password.
       </p>
 
-      {/* Pesan sukses */}
+      {/* Error Message */}
+      {error && (
+        <motion.div
+          className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4 text-sm text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          {error}
+        </motion.div>
+      )}
+
+      {/* Success Message */}
       {message && (
         <motion.div
           className="bg-green-100 text-green-700 px-4 py-2 rounded mb-4 text-sm text-center"
@@ -81,11 +99,11 @@ export default function ForgotPassword({ onSubmit }) {
         </motion.button>
       </form>
 
-      {/* Link kembali ke login */}
+      {/* Link back to login */}
       <div className="mt-6 text-center text-sm text-gray-500">
         Sudah ingat password?{" "}
         <button
-          onClick={() => navigate("/login")}
+          onClick={() => navigate(`/login/${menuId}`, { replace: true })}  // Use the dynamic menuId
           className="cursor-pointer text-blue-500 hover:underline"
         >
           Sign In

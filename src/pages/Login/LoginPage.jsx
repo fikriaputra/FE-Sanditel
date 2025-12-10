@@ -73,7 +73,7 @@ export default function LoginPage() {
           onLogin={handleLogin}
           loading={loading}
           error={error}
-          goRegister={() => navigate("/register")}
+          goRegister={() => navigate(`/register/${menuId}`)} // Fixed error: removed the comment inside JSX
         />
       </div>
 

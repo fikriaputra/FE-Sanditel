@@ -1,17 +1,28 @@
-// src/pages/AdminPekerjaan.jsx
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { Trash2, Check, Eye } from "lucide-react";
 import MainLayoutAdmin from "../../layouts/MainLayoutAdmin";
 import Table from "../../components/ManajemenInventory/DataBarang/Table";
 import TableRowPK from "../../components/LaporanPekerjaan/Pekerjaan/TableRowPK";
-import { Trash2, Check, Eye } from "lucide-react";
 import "../../index.css";
 
 export default function AdminPekerjaan() {
   const navigate = useNavigate();
 
-  // State
+  // State untuk pencarian
   const [search, setSearch] = useState("");
+
+  // State untuk membuka/tutup filter (untuk tampilan mobile)
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // State untuk filter kategori
+  const [filters, setFilters] = useState({
+    JenisPekerjaan: [],
+    Bagian: [],
+    Status: [],
+  });
+
+  // Data pekerjaan (Contoh)
   const [dataPekerjaan, setDataPekerjaan] = useState([
     {
       No: 1,
@@ -39,6 +50,7 @@ export default function AdminPekerjaan() {
     },
   ]);
 
+  // Header tabel
   const headers = [
     "No",
     "Hari Tanggal",
@@ -49,16 +61,23 @@ export default function AdminPekerjaan() {
     "Aksi",
   ];
 
-  // Filter pencarian
+  // Filter pencarian dan filter kategori
   const filteredData = useMemo(
     () =>
-      dataPekerjaan.filter((pekerjaan) =>
-        Object.values(pekerjaan)
+      dataPekerjaan.filter((pekerjaan) => {
+        const searchMatch = Object.values(pekerjaan)
           .join(" ")
           .toLowerCase()
-          .includes(search.toLowerCase())
-      ),
-    [dataPekerjaan, search]
+          .includes(search.toLowerCase());
+
+        const filterMatch = Object.keys(filters).every((filterName) => {
+          if (filters[filterName].length === 0) return true; // If no filter, pass
+          return filters[filterName].includes(pekerjaan[filterName]);
+        });
+
+        return searchMatch && filterMatch;
+      }),
+    [dataPekerjaan, search, filters]
   );
 
   // Badge status (untuk mobile card)
@@ -89,11 +108,45 @@ export default function AdminPekerjaan() {
   };
 
   const handleView = (item) => {
-    // Sesuaikan path detail sesuai kebutuhanmu
     navigate(`/detail-pekerjaan/${item.No}`, {
       state: { data: item },
     });
   };
+
+  // Fungsi untuk mengubah state filter
+  const handleFilterChange = (filterName, value) => {
+    setFilters((prevFilters) => {
+      const updatedFilters = { ...prevFilters };
+      const selectedFilter = updatedFilters[filterName];
+      if (selectedFilter.includes(value)) {
+        updatedFilters[filterName] = selectedFilter.filter(
+          (item) => item !== value
+        );
+      } else {
+        updatedFilters[filterName] = [...selectedFilter, value];
+      }
+      return updatedFilters;
+    });
+  };
+
+  // Custom Filters untuk Table
+  const customFilters = [
+    {
+      name: "JenisPekerjaan",
+      label: "Jenis Pekerjaan",
+      options: ["Instalasi", "Maintenance", "Troubleshooting"],
+    },
+    {
+      name: "Bagian",
+      label: "Bagian",
+      options: ["CCTV", "Internet", "Telepon"],
+    },
+    {
+      name: "Status",
+      label: "Status",
+      options: ["Dikerjakan", "Selesai", "Tidak Dikerjakan"],
+    },
+  ];
 
   return (
     <MainLayoutAdmin>
@@ -101,7 +154,6 @@ export default function AdminPekerjaan() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
           <h2 className="font-bold text-lg sm:text-xl">Daftar Pekerjaan</h2>
-          {/* Tidak ada tombol tambah di admin */}
         </div>
 
         {/* Search (Mobile) */}
@@ -128,7 +180,57 @@ export default function AdminPekerjaan() {
           </svg>
         </div>
 
-        {/* Card Mobile */}
+        {/* Mobile View: Filter Sections */}
+        <div className="sm:hidden mb-4">
+          <button
+            type="button"
+            onClick={() => setIsFilterOpen((prev) => !prev)} // Mengubah state filter
+            className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
+          >
+            Filter
+            <span className="text-xs">▼</span>
+          </button>
+
+          {isFilterOpen && (
+            <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
+              <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
+              {customFilters.map((filter) => (
+                <div key={filter.name} className="border border-gray-200 rounded-lg p-3 mb-3">
+                  <div className="text-xs font-semibold text-gray-700 mb-2">
+                    {filter.label}
+                  </div>
+                  <div className="max-h-40 overflow-y-auto">
+                    {filter.options.map((opt) => (
+                      <label
+                        key={opt}
+                        className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={filters[filter.name]?.includes(opt)}
+                          onChange={() => handleFilterChange(filter.name, opt)}
+                          className="rounded border-gray-300"
+                        />
+                        {opt}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsFilterOpen(false)} // Menutup filter setelah diterapkan
+                  className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
+                >
+                  Terapkan
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile View: Cards */}
         <div className="space-y-3 sm:hidden">
           {filteredData.length > 0 ? (
             filteredData.map((item) => (
@@ -154,15 +256,14 @@ export default function AdminPekerjaan() {
                   Petugas: <span className="font-medium">{item.Petugas}</span>
                 </p>
 
-                {/* Status dengan badge warna */}
+                {/* Status with badge */}
                 <p className="text-sm text-gray-600 flex items-center gap-2">
                   Status:{" "}
-                  <span className={getSubmissionBadge(item.Status)}>
-                    {item.Status}
-                  </span>
+                  <span className={getSubmissionBadge(item.Status)}>{item.Status}</span>
                 </p>
 
-                <div className="flex flex-wrap gap-2 mt-2">
+                {/* Actions */}
+                <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => handleView(item)}
                     className="flex items-center gap-1 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-sm"
@@ -197,7 +298,7 @@ export default function AdminPekerjaan() {
 
         {/* Tabel Desktop */}
         <div id="printArea" className="hidden sm:block overflow-x-auto">
-          <Table headers={headers} search={search} setSearch={setSearch}>
+          <Table headers={headers} search={search} setSearch={setSearch} filters={filters}>
             {filteredData.length > 0 ? (
               filteredData.map((item) => (
                 <TableRowPK

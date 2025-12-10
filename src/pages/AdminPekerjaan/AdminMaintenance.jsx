@@ -1,4 +1,3 @@
-// src/pages/MaintenanceJaringan/AdminMaintenance.jsx
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, Trash2 } from "lucide-react";
@@ -10,6 +9,12 @@ import TableRowMT from "@/components/LaporanPekerjaan/Maintenance/TableRowMT";
 export default function AdminMaintenance() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);  // Initialize state for the filter modal visibility
+  const [filters, setFilters] = useState({
+    periode: [],
+    timPelaksana: [],
+    area: [],
+  });
 
   const [data, setData] = useState([
     {
@@ -46,16 +51,64 @@ export default function AdminMaintenance() {
     },
   ]);
 
-  const filteredData = useMemo(
-    () =>
-      data.filter((item) =>
-        Object.values(item)
-          .join(" ")
-          .toLowerCase()
-          .includes(search.toLowerCase())
-      ),
-    [data, search]
-  );
+  // Filtered data based on search and selected filters
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      // Search match
+      const searchMatch = Object.values(item)
+        .join(" ")
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
+      // Filter match
+      const filterMatch = Object.keys(filters).every((filterName) => {
+        if (filters[filterName].length === 0) return true;
+        return filters[filterName].includes(item[filterName]);
+      });
+
+      return searchMatch && filterMatch;
+    });
+  }, [data, search, filters]);
+
+  // Handle filter change for different fields (periode, timPelaksana, area)
+  const handleFilterChange = (filterName, value) => {
+    setFilters((prevFilters) => {
+      const updatedFilters = { ...prevFilters };
+      const selectedFilter = updatedFilters[filterName];
+      if (selectedFilter.includes(value)) {
+        updatedFilters[filterName] = selectedFilter.filter(
+          (item) => item !== value
+        );
+      } else {
+        updatedFilters[filterName] = [...selectedFilter, value];
+      }
+      return updatedFilters;
+    });
+  };
+
+  // Function to handle the filter apply action
+  const handleApplyFilter = () => {
+    setIsFilterOpen(false); // Close the filter modal
+  };
+
+  // Custom filters for table columns
+  const customFilters = [
+    {
+      name: "periode",
+      label: "Periode",
+      options: ["Bulanan", "Triwulanan", "Mingguan", "Tahunan"],
+    },
+    {
+      name: "timPelaksana",
+      label: "Tim Pelaksana",
+      options: ["Tim Jaringan 1", "Tim Jaringan 2", "Tim Infrastruktur"],
+    },
+    {
+      name: "area",
+      label: "Area",
+      options: ["Gedung Setda A", "Gedung Setda B", "Gedung Sate"],
+    },
+  ];
 
   const handleDelete = (index) => {
     if (window.confirm("Yakin ingin menghapus data ini?")) {
@@ -95,6 +148,59 @@ export default function AdminMaintenance() {
           </svg>
         </div>
 
+        {/* Filter Mobile (Same as Desktop) */}
+        <div className="sm:hidden mb-4">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
+            >
+              Filter
+              <span className="text-xs">▼</span>
+            </button>
+
+            {isFilterOpen && (
+              <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
+                <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
+                {customFilters.map((filter) => (
+                  <div key={filter.name} className="border border-gray-200 rounded-lg p-3 mb-3">
+                    <div className="text-xs font-semibold text-gray-700 mb-2">
+                      {filter.label}
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {filter.options.map((opt) => (
+                        <label
+                          key={opt}
+                          className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filters[filter.name]?.includes(opt)}
+                            onChange={() => handleFilterChange(filter.name, opt)}
+                            className="rounded border-gray-300"
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleApplyFilter} // Apply filter function
+                    className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Card View (Mobile) */}
         <div className="sm:hidden space-y-3">
           {filteredData.length > 0 ? (
@@ -121,7 +227,7 @@ export default function AdminMaintenance() {
                   <span className="font-medium">Area:</span> {item.area}
                 </p>
 
-                {/* Actions (Mobile) – hanya View & Delete */}
+                {/* Actions (Mobile) */}
                 <div className="flex gap-2 mt-2 flex-wrap">
                   <button
                     onClick={() =>
@@ -151,14 +257,8 @@ export default function AdminMaintenance() {
         {/* Table (Desktop) */}
         <div className="hidden sm:block overflow-x-auto">
           <Table
-            headers={[
-              "Nomor Form",
-              "Tanggal",
-              "Periode",
-              "Tim Pelaksana",
-              "Area",
-              "Aksi",
-            ]}
+            headers={[ "Nomor Form", "Tanggal", "Periode", "Tim Pelaksana", "Area", "Aksi", ]}
+            customFilters={customFilters} // Menambahkan filters di sini
           >
             {filteredData.length > 0 ? (
               filteredData.map((item, idx) => (
@@ -166,9 +266,8 @@ export default function AdminMaintenance() {
                   key={item.id}
                   item={item}
                   onView={() =>
-                    navigate(`/detail-maintenance/${item.id}`)
+                    navigate(`/admin-detail-maintenance/${item.id}`, { state: { maintenance: item } })
                   }
-                  // Tidak kirim onEdit supaya tombol Edit tidak muncul
                   onDelete={() => handleDelete(idx)}
                 />
               ))
