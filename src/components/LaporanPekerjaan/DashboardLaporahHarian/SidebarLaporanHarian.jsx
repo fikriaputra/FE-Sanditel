@@ -1,5 +1,4 @@
-// SidebarLaporanHarian.jsx
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import {
   FaBars,
@@ -7,11 +6,12 @@ import {
   FaTasks,
   FaFileAlt,
   FaArrowLeft,
-  FaTools,           // ✅ tambah icon maintenance
+  FaTools, // ✅ tambah icon maintenance
 } from "react-icons/fa";
 
 export default function SidebarLaporanHarian() {
   const navigate = useNavigate();
+  const location = useLocation();  // 🔹 Menambahkan useLocation untuk mengetahui path saat ini
   const [isOpen, setIsOpen] = useState(false); // state sidebar untuk mobile
 
   const menus = [
@@ -82,7 +82,8 @@ export default function SidebarLaporanHarian() {
           {menus.map((menu) => (
             <li
               key={menu.path}
-              className="flex items-center gap-3 p-2 rounded-md hover:bg-blue-100 cursor-pointer transition-colors"
+              className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors
+                ${location.pathname === menu.path ? "bg-blue-100 text-blue-600" : "hover:bg-blue-100"}`}  // 🔹 Menambahkan kelas CSS aktif
               onClick={() => {
                 setIsOpen(false);
                 navigate(menu.path);

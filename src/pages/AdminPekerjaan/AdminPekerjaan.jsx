@@ -61,24 +61,53 @@ export default function AdminPekerjaan() {
     "Aksi",
   ];
 
+  // Custom Filters untuk Table
+  const customFilters = [
+    {
+      name: "JenisPekerjaan",
+      label: "Jenis Pekerjaan",
+      options: ["Instalasi", "Maintenance", "Troubleshooting"],
+    },
+    {
+      name: "Bagian",
+      label: "Bagian",
+      options: ["CCTV", "Internet", "Telepon"],
+    },
+    {
+      name: "Status",
+      label: "Status",
+      options: ["Dikerjakan", "Selesai", "Tidak Dikerjakan"],
+    },
+  ];
+
   // Filter pencarian dan filter kategori
-  const filteredData = useMemo(
-    () =>
-      dataPekerjaan.filter((pekerjaan) => {
-        const searchMatch = Object.values(pekerjaan)
-          .join(" ")
-          .toLowerCase()
-          .includes(search.toLowerCase());
+  const filteredData = useMemo(() => {
+    let filtered = dataPekerjaan.filter((pekerjaan) =>
+      Object.values(pekerjaan)
+        .join(" ")
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    );
 
-        const filterMatch = Object.keys(filters).every((filterName) => {
-          if (filters[filterName].length === 0) return true; // If no filter, pass
-          return filters[filterName].includes(pekerjaan[filterName]);
-        });
+    // Apply JenisPekerjaan filter
+    if (filters.JenisPekerjaan.length > 0) {
+      filtered = filtered.filter((item) =>
+        filters.JenisPekerjaan.includes(item.JenisPekerjaan)
+      );
+    }
 
-        return searchMatch && filterMatch;
-      }),
-    [dataPekerjaan, search, filters]
-  );
+    // Apply Bagian filter
+    if (filters.Bagian.length > 0) {
+      filtered = filtered.filter((item) => filters.Bagian.includes(item.Bagian));
+    }
+
+    // Apply Status filter
+    if (filters.Status.length > 0) {
+      filtered = filtered.filter((item) => filters.Status.includes(item.Status));
+    }
+
+    return filtered;
+  }, [dataPekerjaan, search, filters]);
 
   // Badge status (untuk mobile card)
   const getSubmissionBadge = (status) => {
@@ -129,25 +158,6 @@ export default function AdminPekerjaan() {
     });
   };
 
-  // Custom Filters untuk Table
-  const customFilters = [
-    {
-      name: "JenisPekerjaan",
-      label: "Jenis Pekerjaan",
-      options: ["Instalasi", "Maintenance", "Troubleshooting"],
-    },
-    {
-      name: "Bagian",
-      label: "Bagian",
-      options: ["CCTV", "Internet", "Telepon"],
-    },
-    {
-      name: "Status",
-      label: "Status",
-      options: ["Dikerjakan", "Selesai", "Tidak Dikerjakan"],
-    },
-  ];
-
   return (
     <MainLayoutAdmin>
       <div className="bg-white p-3 sm:p-6 rounded-lg shadow">
@@ -182,52 +192,57 @@ export default function AdminPekerjaan() {
 
         {/* Mobile View: Filter Sections */}
         <div className="sm:hidden mb-4">
-          <button
-            type="button"
-            onClick={() => setIsFilterOpen((prev) => !prev)} // Mengubah state filter
-            className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
-          >
-            Filter
-            <span className="text-xs">▼</span>
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
+            >
+              Filter
+              <span className="text-xs">▼</span>
+            </button>
 
-          {isFilterOpen && (
-            <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
-              <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
-              {customFilters.map((filter) => (
-                <div key={filter.name} className="border border-gray-200 rounded-lg p-3 mb-3">
-                  <div className="text-xs font-semibold text-gray-700 mb-2">
-                    {filter.label}
+            {isFilterOpen && (
+              <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
+                <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
+                {customFilters.map((filter) => (
+                  <div
+                    key={filter.name}
+                    className="border border-gray-200 rounded-lg p-3 mb-3"
+                  >
+                    <div className="text-xs font-semibold text-gray-700 mb-2">
+                      {filter.label}
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {filter.options.map((opt) => (
+                        <label
+                          key={opt}
+                          className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filters[filter.name]?.includes(opt)}
+                            onChange={() => handleFilterChange(filter.name, opt)}
+                            className="rounded border-gray-300"
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                  <div className="max-h-40 overflow-y-auto">
-                    {filter.options.map((opt) => (
-                      <label
-                        key={opt}
-                        className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={filters[filter.name]?.includes(opt)}
-                          onChange={() => handleFilterChange(filter.name, opt)}
-                          className="rounded border-gray-300"
-                        />
-                        {opt}
-                      </label>
-                    ))}
-                  </div>
+                ))}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)}
+                    className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
+                  >
+                    Apply
+                  </button>
                 </div>
-              ))}
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setIsFilterOpen(false)} // Menutup filter setelah diterapkan
-                  className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
-                >
-                  Terapkan
-                </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Mobile View: Cards */}
@@ -259,7 +274,9 @@ export default function AdminPekerjaan() {
                 {/* Status with badge */}
                 <p className="text-sm text-gray-600 flex items-center gap-2">
                   Status:{" "}
-                  <span className={getSubmissionBadge(item.Status)}>{item.Status}</span>
+                  <span className={getSubmissionBadge(item.Status)}>
+                    {item.Status}
+                  </span>
                 </p>
 
                 {/* Actions */}
@@ -298,13 +315,18 @@ export default function AdminPekerjaan() {
 
         {/* Tabel Desktop */}
         <div id="printArea" className="hidden sm:block overflow-x-auto">
-          <Table headers={headers} search={search} setSearch={setSearch} filters={filters}>
+          <Table
+            headers={headers}
+            search={search}
+            setSearch={setSearch}
+            customFilters={customFilters}
+          >
             {filteredData.length > 0 ? (
               filteredData.map((item) => (
                 <TableRowPK
                   key={item.No}
                   item={item}
-                  onView={() => handleView(item)} 
+                  onView={() => handleView(item)}
                   onDelete={() => handleDelete(item)}
                   onApprove={() => handleApprove(item)}
                 />

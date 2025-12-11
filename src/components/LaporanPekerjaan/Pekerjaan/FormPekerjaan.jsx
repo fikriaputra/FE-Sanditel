@@ -103,10 +103,10 @@ export default function FormPekerjaan({ onSubmit, onCancel, initialData, hideRes
           className="w-full border rounded-lg px-3 py-2 text-sm sm:text-base"
         >
           <option value="">-- Pilih Jenis Pekerjaan --</option>
-          <option value="Perawatan">Perawatan</option>
-          <option value="Perbaikan">Perbaikan</option>
+          <option value="Perawatan">Maintenance</option>
+          <option value="Perbaikan">Troubleshooting</option>
           <option value="Instalasi">Instalasi</option>
-          <option value="Pemeriksaan">Pemeriksaan</option>
+          <option value="Pemeriksaan">Monitoring</option>
         </select>
       </div>
 
@@ -120,11 +120,10 @@ export default function FormPekerjaan({ onSubmit, onCancel, initialData, hideRes
           className="w-full border rounded-lg px-3 py-2 text-sm sm:text-base"
         >
           <option value="">-- Pilih Bagian --</option>
-          <option value="IT">IT</option>
-          <option value="Jaringan">Jaringan</option>
-          <option value="Listrik">Listrik</option>
-          <option value="Mekanik">Mekanik</option>
-          <option value="Lainnya">Lainnya</option>
+          <option value="IT">CCTV</option>
+          <option value="Jaringan">Internet</option>
+          <option value="Listrik">Telepon</option>
+          <option value="Mekanik">TV</option>
         </select>
       </div>
 

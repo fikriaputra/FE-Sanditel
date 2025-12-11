@@ -1,5 +1,4 @@
-// src/components/Dashboard/Sidebar.jsx
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   FaBars,
   FaBox,
@@ -20,7 +19,7 @@ const defaultMenus = [
   { name: "Data Aset", icon: <FaDatabase />, path: "/data-aset" },
   { name: "Barang Masuk", icon: <FaSignInAlt />, path: "/barang-masuk" },
   { name: "Barang Keluar", icon: <FaSignOutAlt />, path: "/barang-keluar" },
-  { name: "Pengajuan Barang", icon: <FaClipboardList />, path: "/pengajuan-barang" },
+  // { name: "Pengajuan Barang", icon: <FaClipboardList />, path: "/pengajuan-barang" },
   { name: "Peminjaman Aset", icon: <FaExchangeAlt />, path: "/peminjaman-aset" },
   { name: "Stok Opname", icon: <FaBoxes />, path: "/stok-opname" },
 ];
@@ -32,6 +31,7 @@ export default function Sidebar({
   homePath = "/menu",        // ✅ bisa beda untuk admin: "/menu-admin"
 }) {
   const navigate = useNavigate();
+  const location = useLocation();  // 🔹 Menambahkan useLocation untuk mendapatkan path aktif
 
   return (
     <>
@@ -94,7 +94,8 @@ export default function Sidebar({
           {menus.map((menu) => (
             <li
               key={menu.path}
-              className="flex items-center gap-3 p-2 rounded-md hover:bg-blue-100 cursor-pointer transition-colors"
+              className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors
+                ${location.pathname === menu.path ? "bg-blue-100 text-blue-600" : "hover:bg-blue-100"}`}
               onClick={() => {
                 setIsOpen(false);
                 navigate(menu.path);

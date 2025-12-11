@@ -1,5 +1,4 @@
-// SidebarAdminPekerjaan.jsx
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import {
   FaBars,
@@ -12,15 +11,15 @@ import {
 
 export default function SidebarAdminPekerjaan() {
   const navigate = useNavigate();
+  const location = useLocation();  // 🔹 Menambahkan useLocation untuk mendapatkan path saat ini
   const [isOpen, setIsOpen] = useState(false); // state sidebar untuk mobile
 
   const menus = [
-  { name: "Admin Dashboard", icon: <FaChartPie />, path: "/admin-dashboard-pekerjaan" },
-  { name: "Admin Pekerjaan", icon: <FaTasks />, path: "/admin-pekerjaan" },
-  { name: "Admin Laporan", icon: <FaFileAlt />, path: "/admin-laporan" },
-  { name: "Admin Maintenance", icon: <FaTools />, path: "/admin-maintenance" },
-];
-
+    { name: "Admin Dashboard", icon: <FaChartPie />, path: "/admin-dashboard-pekerjaan" },
+    { name: "Admin Pekerjaan", icon: <FaTasks />, path: "/admin-pekerjaan" },
+    { name: "Admin Laporan", icon: <FaFileAlt />, path: "/admin-laporan" },
+    { name: "Admin Maintenance", icon: <FaTools />, path: "/admin-maintenance" },
+  ];
 
   return (
     <>
@@ -83,7 +82,8 @@ export default function SidebarAdminPekerjaan() {
           {menus.map((menu) => (
             <li
               key={menu.path}
-              className="flex items-center gap-3 p-2 rounded-md hover:bg-blue-100 cursor-pointer transition-colors"
+              className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors
+                ${location.pathname === menu.path ? "bg-blue-100 text-blue-600" : "hover:bg-blue-100"}`}  // 🔹 Menambahkan kelas CSS aktif
               onClick={() => {
                 setIsOpen(false);
                 navigate(menu.path);

@@ -87,12 +87,9 @@ export default function FormDataBarang({ onSubmit, onCancel, initialData, hideRe
         >
           <option value="">-- Pilih Jenis Barang --</option>
           <option value="Elektronik">Elektronik</option>
-          <option value="Furniture">Furniture</option>
           <option value="Perlengkapan Kantor">Perlengkapan Kantor</option>
-          <option value="Aksesoris">Aksesoris</option>
           <option value="Alat">Alat</option>
           <option value="Bahan">Bahan</option>
-          <option value="Lainnya">Lainnya</option>
         </select>
       </div>
 
@@ -107,7 +104,7 @@ export default function FormDataBarang({ onSubmit, onCancel, initialData, hideRe
         >
           <option value="">-- Pilih Satuan --</option>
           <option value="Unit">Unit</option>
-          <option value="PCS">PCS</option>
+          <option value="PCS">Pcs</option>
           <option value="Box">Box</option>
           <option value="Kg">Kg</option>
         </select>

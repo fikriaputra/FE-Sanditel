@@ -1,5 +1,7 @@
-// src/components/Maintenance/FormEditMaintenance3.jsx
 import { useState, useEffect } from "react";
+
+// 🔹 Cache di memory (nilai akan reset hanya ketika halaman di-refresh)
+let cachedEditMaintenance3 = null;
 
 export default function FormEditMaintenance3({ onSubmit, onCancel, initialData }) {
   const initialState = {
@@ -39,19 +41,29 @@ export default function FormEditMaintenance3({ onSubmit, onCancel, initialData }
     tanggal: "",
   };
 
-  const [formData, setFormData] = useState(initialState);
+  const [formData, setFormData] = useState(() => {
+    return cachedEditMaintenance3 || initialData || initialState;
+  });
 
-  // Prefill kalau ada initialData
+  // 🔹 Update state saat `initialData` berubah
   useEffect(() => {
     if (initialData) {
-      setFormData((prev) => ({
-        ...prev,
+      const updated = {
+        ...initialState,
         ...initialData,
-        aksesJaringan: initialData.aksesJaringan || prev.aksesJaringan,
-        statusUmum: initialData.statusUmum || prev.statusUmum,
-      }));
+        aksesJaringan: initialData.aksesJaringan || initialState.aksesJaringan,
+        statusUmum: initialData.statusUmum || initialState.statusUmum,
+      };
+
+      setFormData(updated); 
+      cachedEditMaintenance3 = updated; // Simpan data ke cache
     }
   }, [initialData]);
+
+  // 🔹 Simpan data ke cache saat formData berubah
+  useEffect(() => {
+    cachedEditMaintenance3 = formData; // Simpan form data ke cache
+  }, [formData]);
 
   // Akses Jaringan: hasil & catatan
   const handleAksesHasilChange = (index, value) => {
@@ -87,16 +99,8 @@ export default function FormEditMaintenance3({ onSubmit, onCancel, initialData }
 
   // Reset ke initialData kalau ada, kalau tidak ke initialState
   const handleReset = () => {
-    if (initialData) {
-      setFormData((prev) => ({
-        ...prev,
-        ...initialData,
-        aksesJaringan: initialData.aksesJaringan || prev.aksesJaringan,
-        statusUmum: initialData.statusUmum || prev.statusUmum,
-      }));
-    } else {
-      setFormData(initialState);
-    }
+    setFormData(initialData || initialState); // Reset data form
+    cachedEditMaintenance3 = initialData || initialState; // Reset cache
   };
 
   // Submit edit

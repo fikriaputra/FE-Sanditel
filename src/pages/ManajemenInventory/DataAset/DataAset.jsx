@@ -24,6 +24,25 @@ export default function DataAset() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortCategory] = useState(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    category: [],
+    status: [],
+  });
+
+  // Definisikan custom filters
+  const customFilters = [
+    {
+      name: "category",
+      label: "Kategori",
+      options: ["Elektronik", "Furnitur"],
+    },
+    {
+      name: "status",
+      label: "Status",
+      options: ["Aktif", "Tidak Aktif"],
+    },
+  ];
 
   const getStatusBadge = (status) =>
     status === "Aktif"
@@ -37,11 +56,40 @@ export default function DataAset() {
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.brandCode.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    // Apply sortCategory (tombol Sortir Kategori - fungsi berbeda)
     if (sortCategory) {
       filtered = filtered.filter((item) => item.category === sortCategory);
     }
+
+    // Apply category filter (dari dropdown filter)
+    if (filters.category.length > 0) {
+      filtered = filtered.filter((item) => filters.category.includes(item.category));
+    }
+
+    // Apply status filter
+    if (filters.status.length > 0) {
+      filtered = filtered.filter((item) => filters.status.includes(item.status));
+    }
+
     return filtered;
-  }, [assets, searchTerm, sortCategory]);
+  }, [assets, searchTerm, sortCategory, filters]);
+
+  // Fungsi untuk mengubah filter
+  const handleFilterChange = (filterName, value) => {
+    setFilters((prevFilters) => {
+      const updatedFilters = { ...prevFilters };
+      const selectedFilter = updatedFilters[filterName];
+      if (selectedFilter.includes(value)) {
+        updatedFilters[filterName] = selectedFilter.filter(
+          (item) => item !== value
+        );
+      } else {
+        updatedFilters[filterName] = [...selectedFilter, value];
+      }
+      return updatedFilters;
+    });
+  };
 
   // Hapus aset dari state
   const handleDelete = (number) => {
@@ -69,7 +117,7 @@ export default function DataAset() {
               <span className="hidden sm:inline ml-1">Tambah</span>
             </button>
 
-            {/* Sort */}
+            {/* Sort - Tombol ini tetap untuk sortir kategori (fungsi berbeda) */}
             <button
               onClick={() => navigate("/kategori")}
               className="flex items-center justify-center bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded shadow transition w-10 h-10 sm:w-auto sm:h-auto"
@@ -113,6 +161,59 @@ export default function DataAset() {
               d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z"
             />
           </svg>
+        </div>
+
+        {/* Filter Mobile */}
+        <div className="sm:hidden mb-4">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
+            >
+              Filter
+              <span className="text-xs">▼</span>
+            </button>
+
+            {isFilterOpen && (
+              <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
+                <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
+                {customFilters.map((filter) => (
+                  <div key={filter.name} className="border border-gray-200 rounded-lg p-3 mb-3">
+                    <div className="text-xs font-semibold text-gray-700 mb-2">
+                      {filter.label}
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {filter.options.map((opt) => (
+                        <label
+                          key={opt}
+                          className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filters[filter.name]?.includes(opt)}
+                            onChange={() => handleFilterChange(filter.name, opt)}
+                            className="rounded border-gray-300"
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)}
+                    className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Mobile Card View */}
@@ -181,6 +282,7 @@ export default function DataAset() {
               "Log Pembaruan Barcode",
               "Aksi",
             ]}
+            customFilters={customFilters}
           >
             {filteredAssets.length > 0 ? (
               filteredAssets.map((item) => (

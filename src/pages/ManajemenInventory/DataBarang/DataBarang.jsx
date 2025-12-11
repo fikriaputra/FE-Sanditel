@@ -1,41 +1,73 @@
-// src/pages/ManajemenInventory/DataBarang/DataBarang.jsx
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../../layouts/MainLayout";
 import Table from "../../../components/ManajemenInventory/DataBarang/Table";
 import TableRowDB from "../../../components/ManajemenInventory/DataBarang/TableRowDB";
 import { Printer, Plus, Pencil, Trash2 } from "lucide-react";
-import PrintTable from "../../../components/Shared/PrintTable"; // 🔹 pakai komponen cetak
+import PrintTable from "../../../components/Shared/PrintTable";
 import "../../../index.css";
 
 export default function DataBarang() {
   const navigate = useNavigate();
 
-  const pageTitle = "Daftar Data Barang"; // 🔹 judul halaman + judul cetak
+  const pageTitle = "Daftar Data Barang";
 
   // State
   const [search, setSearch] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    JenisBarang: [],
+    Satuan: [],
+  });
+
   const [dataBarang, setDataBarang] = useState([
     { Number: 1, NamaBarang: "Laptop", JenisBarang: "Elektronik", Stok: 98, Satuan: "Unit" },
     { Number: 2, NamaBarang: "Projector", JenisBarang: "Elektronik", Stok: 12, Satuan: "Unit" },
-    { Number: 3, NamaBarang: "Office Chair", JenisBarang: "Furniture", Stok: 21, Satuan: "Pcs" },
-    { Number: 4, NamaBarang: "Desk", JenisBarang: "Furniture", Stok: 23, Satuan: "Pcs" },
+    { Number: 3, NamaBarang: "Office Chair", JenisBarang: "Elektronik", Stok: 21, Satuan: "Pcs" },
+    { Number: 4, NamaBarang: "Desk", JenisBarang: "Perlengkapan Kantor", Stok: 23, Satuan: "Pcs" },
     { Number: 5, NamaBarang: "Printer", JenisBarang: "Elektronik", Stok: 13, Satuan: "Unit" },
     { Number: 6, NamaBarang: "Whiteboard", JenisBarang: "Perlengkapan Kantor", Stok: 15, Satuan: "Pcs" },
-    { Number: 7, NamaBarang: "Mouse Wireless", JenisBarang: "Aksesoris", Stok: 50, Satuan: "Pcs" },
+    { Number: 7, NamaBarang: "Mouse Wireless", JenisBarang: "Perlengkapan Kantor", Stok: 50, Satuan: "Pcs" },
   ]);
 
   const headers = ["No", "Nama Barang", "Jenis Barang", "Stok", "Satuan", "Aksi"];
 
-  // Filter pencarian
+  // Definisikan custom filters untuk Table
+  const customFilters = [
+    {
+      name: "JenisBarang",
+      label: "Jenis Barang",
+      options: ["Elektronik", "Perlengkapan Kantor"],
+    },
+    {
+      name: "Satuan",
+      label: "Satuan",
+      options: ["Unit", "Pcs"],
+    },
+  ];
+
+  // Filter pencarian dan filter berdasarkan kategori
   const filteredData = useMemo(() => {
-    return dataBarang.filter((barang) =>
-      Object.values(barang)
+    let filtered = dataBarang.filter((barang) => {
+      const searchMatch = Object.values(barang)
         .join(" ")
         .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  }, [dataBarang, search]);
+        .includes(search.toLowerCase());
+      return searchMatch;
+    });
+
+    // Apply JenisBarang filter
+    if (filters.JenisBarang.length > 0) {
+      filtered = filtered.filter((item) => filters.JenisBarang.includes(item.JenisBarang));
+    }
+
+    // Apply Satuan filter
+    if (filters.Satuan.length > 0) {
+      filtered = filtered.filter((item) => filters.Satuan.includes(item.Satuan));
+    }
+
+    return filtered;
+  }, [dataBarang, search, filters]);
 
   // Handlers
   const handleTambah = () => navigate("/add-data-barang");
@@ -47,6 +79,22 @@ export default function DataBarang() {
         prev.filter((barang) => barang.Number !== item.Number)
       );
     }
+  };
+
+  // Fungsi untuk mengubah filter
+  const handleFilterChange = (filterName, value) => {
+    setFilters((prevFilters) => {
+      const updatedFilters = { ...prevFilters };
+      const selectedFilter = updatedFilters[filterName];
+      if (selectedFilter.includes(value)) {
+        updatedFilters[filterName] = selectedFilter.filter(
+          (item) => item !== value
+        );
+      } else {
+        updatedFilters[filterName] = [...selectedFilter, value];
+      }
+      return updatedFilters;
+    });
   };
 
   return (
@@ -100,6 +148,59 @@ export default function DataBarang() {
           </svg>
         </div>
 
+        {/* Filter Mobile */}
+        <div className="sm:hidden mb-4">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
+            >
+              Filter
+              <span className="text-xs">▼</span>
+            </button>
+
+            {isFilterOpen && (
+              <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
+                <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
+                {customFilters.map((filter) => (
+                  <div key={filter.name} className="border border-gray-200 rounded-lg p-3 mb-3">
+                    <div className="text-xs font-semibold text-gray-700 mb-2">
+                      {filter.label}
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {filter.options.map((opt) => (
+                        <label
+                          key={opt}
+                          className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filters[filter.name]?.includes(opt)}
+                            onChange={() => handleFilterChange(filter.name, opt)}
+                            className="rounded border-gray-300"
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)}
+                    className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Card Mobile */}
         <div className="space-y-3 sm:hidden">
           {filteredData.length > 0 ? (
@@ -148,9 +249,14 @@ export default function DataBarang() {
           )}
         </div>
 
-        {/* Tabel Desktop (layar biasa, ada kolom Aksi) */}
+        {/* Tabel Desktop */}
         <div className="hidden sm:block overflow-x-auto">
-          <Table headers={headers} search={search} setSearch={setSearch}>
+          <Table 
+            headers={headers} 
+            search={search} 
+            setSearch={setSearch}
+            customFilters={customFilters}
+          >
             {filteredData.length > 0 ? (
               filteredData.map((item) => (
                 <TableRowDB
@@ -174,7 +280,7 @@ export default function DataBarang() {
         </div>
       </div>
 
-      {/* 🔹 Tabel khusus CETAK: pakai komponen PrintTable */}
+      {/* Tabel khusus CETAK: pakai komponen PrintTable */}
       <PrintTable
         printId="print-data-barang"
         title={pageTitle}
