@@ -6,19 +6,19 @@ import {
   FaTasks,
   FaFileAlt,
   FaArrowLeft,
-  FaTools, // ✅ tambah icon maintenance
+  FaTools,
 } from "react-icons/fa";
 
 export default function SidebarLaporanHarian() {
   const navigate = useNavigate();
-  const location = useLocation();  // 🔹 Menambahkan useLocation untuk mengetahui path saat ini
-  const [isOpen, setIsOpen] = useState(false); // state sidebar untuk mobile
+  const location = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
 
   const menus = [
     { name: "Dashboard", icon: <FaChartPie />, path: "/dashboard-laporan" },
     { name: "Pekerjaan", icon: <FaTasks />, path: "/pekerjaan" },
     { name: "Laporan", icon: <FaFileAlt />, path: "/laporan" },
-    { name: "Maintenance", icon: <FaTools />, path: "/maintenance" }, // ✅ menu baru
+    { name: "Maintenance", icon: <FaTools />, path: "/maintenance" },
   ];
 
   return (
@@ -62,7 +62,7 @@ export default function SidebarLaporanHarian() {
         </div>
 
         {/* Tombol Kembali Mobile */}
-        {isOpen && (
+        {/* {isOpen && (
           <div className="lg:hidden p-4 border-b">
             <button
               className="flex items-center gap-2 text-gray-700 font-medium hover:text-blue-600 transition-colors"
@@ -75,15 +75,14 @@ export default function SidebarLaporanHarian() {
               <span>Kembali ke Menu</span>
             </button>
           </div>
-        )}
+        )} */}
 
         {/* Menu List */}
         <ul className="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-60px)]">
           {menus.map((menu) => (
             <li
               key={menu.path}
-              className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors
-                ${location.pathname === menu.path ? "bg-blue-100 text-blue-600" : "hover:bg-blue-100"}`}  // 🔹 Menambahkan kelas CSS aktif
+              className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors hover:bg-blue-100`}
               onClick={() => {
                 setIsOpen(false);
                 navigate(menu.path);

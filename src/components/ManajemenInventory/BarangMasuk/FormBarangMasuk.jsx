@@ -1,4 +1,3 @@
-// src/components/FormBarangMasuk.jsx
 import { useState, useEffect } from "react";
 
 export default function FormBarangMasuk({ initialData, onSubmit, onCancel }) {
@@ -8,7 +7,7 @@ export default function FormBarangMasuk({ initialData, onSubmit, onCancel }) {
     kategori: "",
     namaBarang: "",
     jumlahMasuk: "",
-    user: "",
+    admin: "",
   });
 
   // Set data awal jika ada initialData
@@ -31,15 +30,57 @@ export default function FormBarangMasuk({ initialData, onSubmit, onCancel }) {
         kategori: "",
         namaBarang: "",
         jumlahMasuk: "",
-        user: "",
+        admin: "",
       });
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  const token =
+    localStorage.getItem("token") ||
+    "17|SAHFMBxNNbEDXaTIBQzbYHIQnw0lCEY5JwPsU8cPef8c2ca6";
+
+  const requestBody = {
+    tglMasuk: formData.tglMasuk,
+    kategori: formData.kategori,
+    namaBarang: formData.namaBarang,
+    jumlahMasuk: Number(formData.jumlahMasuk),
+    user: formData.admin,
   };
+
+  try {
+    const response = await fetch(
+      "https://jungly-lathery-justin.ngrok-free.dev/api/barang-masuk",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    const responseData = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      console.error("POST gagal:", responseData);
+      alert(responseData?.message || "Gagal mengirim data barang masuk.");
+      return;
+    }
+
+    alert("Barang masuk berhasil!");
+    onSubmit?.(responseData); // refresh/close modal di parent
+  } catch (error) {
+    console.error("Error:", error);
+    alert("Terjadi kesalahan. Silakan coba lagi.");
+  }
+};
+
 
   const fields = [
     {
@@ -74,10 +115,10 @@ export default function FormBarangMasuk({ initialData, onSubmit, onCancel }) {
       placeholder: "Masukkan jumlah masuk",
     },
     {
-      label: "User",
-      name: "user",
+      label: "Admin",
+      name: "admin",
       type: "text",
-      placeholder: "Masukkan nama user",
+      placeholder: "Masukkan nama admin",
     },
   ];
 

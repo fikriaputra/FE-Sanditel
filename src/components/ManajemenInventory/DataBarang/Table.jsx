@@ -8,9 +8,15 @@ export default function Table({
   children,
   pagination = true,
   customFilters = [],
+  showFilter = true, // 🔹 New prop untuk mengontrol tampilan filter
+  search,
+  setSearch,
 }) {
-  const [search, setSearch] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+  const [internalSearch, setInternalSearch] = useState("");
+
+  // ✅ default: kolom pertama (No) ASC
+  const [sortConfig, setSortConfig] = useState({ key: 0, direction: "asc" });
+
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -18,24 +24,25 @@ export default function Table({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({});
 
+  // Use controlled or internal search state
+  const searchValue = search !== undefined ? search : internalSearch;
+  const setSearchValue = setSearch !== undefined ? setSearch : setInternalSearch;
+
   // --- Initialize filters based on customFilters passed from parent ---
   useEffect(() => {
-    // Initialize filters only when customFilters change, not on every render
     if (customFilters.length) {
       const initialFilters = customFilters.reduce((acc, filter) => {
-        // Initialize each filter with an empty array
         acc[filter.name] = [];
         return acc;
       }, {});
       setFilters((prevFilters) => {
-        // Only update state if the filters haven't been initialized yet
         if (JSON.stringify(prevFilters) !== JSON.stringify(initialFilters)) {
           return initialFilters;
         }
         return prevFilters;
       });
     }
-  }, [customFilters]); // Only run when customFilters prop changes
+  }, [customFilters]);
 
   // Toggle filter option in the filters state
   const toggleFilterOption = (columnName, value) => {
@@ -44,10 +51,8 @@ export default function Table({
       const currentFilter = newFilters[columnName] || [];
 
       if (currentFilter.includes(value)) {
-        // Remove filter option if already selected
         newFilters[columnName] = currentFilter.filter((item) => item !== value);
       } else {
-        // Add filter option if not selected
         newFilters[columnName] = [...currentFilter, value];
       }
 
@@ -58,7 +63,7 @@ export default function Table({
   // Apply filters and reset to the first page
   const handleApplyFilter = () => {
     setIsFilterOpen(false);
-    setCurrentPage(1); // Reset to the first page after applying filters
+    setCurrentPage(1);
   };
 
   // Sorting handler
@@ -75,7 +80,6 @@ export default function Table({
     .filter((child) => {
       if (!child) return false;
 
-      // Get the row values
       let rowValues = [];
       if (child.props?.item) {
         rowValues = Object.values(child.props.item);
@@ -97,9 +101,9 @@ export default function Table({
       const searchableContent = stringValues.join(" ");
       const matchesSearch = searchableContent
         .toLowerCase()
-        .includes(search.toLowerCase());
+        .includes(searchValue.toLowerCase());
 
-      // --- FILTERS (Check the selected filter values) ---
+      // --- FILTERS ---
       let isMatch = true;
       for (let columnName in filters) {
         const filterValues = filters[columnName];
@@ -116,34 +120,45 @@ export default function Table({
       return matchesSearch && isMatch;
     })
     .sort((a, b) => {
-      if (!sortConfig.key && !sortConfig.direction) return 0;
+      // ✅ jangan pakai !sortConfig.key karena key=0 itu valid
+      if (sortConfig.key === null || sortConfig.direction === null) return 0;
 
       let aValue = "";
       let bValue = "";
 
       if (a.props?.item && b.props?.item) {
-        aValue = Object.values(a.props.item)[sortConfig.key] || "";
-        bValue = Object.values(b.props.item)[sortConfig.key] || "";
+        aValue = Object.values(a.props.item)[sortConfig.key] ?? "";
+        bValue = Object.values(b.props.item)[sortConfig.key] ?? "";
       } else if (a.props?.children && b.props?.children) {
         const aChildren = React.Children.toArray(a.props.children);
         const bChildren = React.Children.toArray(b.props.children);
+
         const aChild = aChildren[sortConfig.key];
         const bChild = bChildren[sortConfig.key];
 
         const aChildVal = aChild?.props?.children;
         const bChildVal = bChild?.props?.children;
 
-        aValue = Array.isArray(aChildVal)
-          ? aChildVal.join(" ")
-          : aChildVal || "";
-        bValue = Array.isArray(bChildVal)
-          ? bChildVal.join(" ")
-          : bChildVal || "";
+        aValue = Array.isArray(aChildVal) ? aChildVal.join(" ") : aChildVal ?? "";
+        bValue = Array.isArray(bChildVal) ? bChildVal.join(" ") : bChildVal ?? "";
       }
 
-      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-      return 0;
+      // ✅ numeric-aware sorting (1,2,10 urut bener)
+      const aNum = Number(aValue);
+      const bNum = Number(bValue);
+      const bothNumeric = !Number.isNaN(aNum) && !Number.isNaN(bNum);
+
+      if (bothNumeric) {
+        return sortConfig.direction === "asc" ? aNum - bNum : bNum - aNum;
+      }
+
+      const aStr = String(aValue ?? "");
+      const bStr = String(bValue ?? "");
+      const cmp = aStr.localeCompare(bStr, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+      return sortConfig.direction === "asc" ? cmp : -cmp;
     });
 
   // Pagination logic
@@ -151,9 +166,7 @@ export default function Table({
   const totalPages = pagination ? Math.ceil(totalRows / rowsPerPage) : 1;
   const startIndex = pagination ? (currentPage - 1) * rowsPerPage : 0;
   const endIndex = pagination ? startIndex + rowsPerPage : totalRows;
-  const paginatedRows = pagination
-    ? filteredRows.slice(startIndex, endIndex)
-    : filteredRows;
+  const paginatedRows = pagination ? filteredRows.slice(startIndex, endIndex) : filteredRows;
 
   const handlePageChange = (page) => {
     if (page < 1 || page > totalPages) return;
@@ -164,66 +177,115 @@ export default function Table({
     <div className="w-full px-2 sm:px-0">
       {/* Top Controls */}
       <div className="mb-4 flex flex-col md:flex-row justify-between items-center gap-3">
-        {/* FILTER DROPDOWN */}
-        <div className="relative w-full md:w-auto self-start">
-          <button
-            type="button"
-            onClick={() => setIsFilterOpen((prev) => !prev)}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
-          >
-            Filter
-            <span className="text-xs">▼</span>
-          </button>
+        {/* Left: Filter + Show */}
+        <div className="w-full md:w-auto flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          {/* FILTER */}
+          {showFilter && customFilters.length > 0 && (
+            <div className="relative w-full md:w-auto self-start">
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen((prev) => !prev)}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
+              >
+                Filter <span className="text-xs">▼</span>
+              </button>
 
-          {isFilterOpen && (
-            <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
-              <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
+              {isFilterOpen && (
+                <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
+                  <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
 
-              {/* Render dynamic filters for each custom filter passed to Table */}
-              {customFilters.map((filter) => (
-                <div key={filter.name} className="border border-gray-200 rounded-lg p-3 mb-3">
-                  <div className="text-xs font-semibold text-gray-700 mb-2">
-                    {filter.label}
-                  </div>
-                  <div className="max-h-40 overflow-y-auto"> {/* Scrollable container */}
-                    {filter.options.map((opt) => (
-                      <label
-                        key={opt}
-                        className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={filters[filter.name]?.includes(opt)}
-                          onChange={() => toggleFilterOption(filter.name, opt)}
-                          className="rounded border-gray-300"
-                        />
-                        {opt}
-                      </label>
-                    ))}
+                  {customFilters.map((filter) => (
+                    <div
+                      key={filter.name}
+                      className="border border-gray-200 rounded-lg p-3 mb-3"
+                    >
+                      <div className="text-xs font-semibold text-gray-700 mb-2">
+                        {filter.label}
+                      </div>
+                      <div className="max-h-40 overflow-y-auto">
+                        {filter.options.map((opt) => (
+                          <label
+                            key={opt}
+                            className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={filters[filter.name]?.includes(opt)}
+                              onChange={() => toggleFilterOption(filter.name, opt)}
+                              className="rounded border-gray-300"
+                            />
+                            {opt}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleApplyFilter}
+                      className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
+                    >
+                      Apply
+                    </button>
                   </div>
                 </div>
-              ))}
+              )}
+            </div>
+          )}
 
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleApplyFilter}
-                  className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
+          {/* SHOW (sebelah Filter) */}
+          {pagination && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-700 font-medium">Show</span>
+              <div className="relative">
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => {
+                    setRowsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="appearance-none bg-transparent border-b-2 border-gray-300 
+                             focus:border-blue-500 outline-none px-1 py-1 pr-6 text-gray-800 
+                             font-medium transition-all duration-200 text-sm"
                 >
-                  Apply
-                </button>
+                  {[10, 25, 50, 100].map((num) => (
+                    <option key={num} value={num}>
+                      {num}
+                    </option>
+                  ))}
+                </select>
+                <svg
+                  className="absolute right-1 top-2 w-4 h-4 text-gray-500 pointer-events-none"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
               </div>
+              <span className="text-gray-700 font-medium">data</span>
             </div>
           )}
         </div>
 
-        {/* Search bar */}
-        <div className="relative w-full md:w-[25%]">
+        {/* Right: Search */}
+        <div
+          className={`relative w-full ${
+            showFilter && customFilters.length > 0 ? "md:w-[25%]" : "md:w-[30%]"
+          }`}
+        >
           <input
             type="text"
             placeholder="Cari data..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none transition text-sm"
           />
         </div>
@@ -326,45 +388,6 @@ export default function Table({
               >
                 Last
               </button>
-            </div>
-          </div>
-
-          {/* Show data move to bottom-center */}
-          <div className="mt-3 flex justify-center">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-700 font-medium">Show</span>
-              <div className="relative">
-                <select
-                  value={rowsPerPage}
-                  onChange={(e) => {
-                    setRowsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className="appearance-none bg-transparent border-b-2 border-gray-300 
-                             focus:border-blue-500 outline-none px-1 py-1 pr-6 text-gray-800 
-                             font-medium transition-all duration-200 text-sm"
-                >
-                  {[10, 25, 50, 100].map((num) => (
-                    <option key={num} value={num}>
-                      {num}
-                    </option>
-                  ))}
-                </select>
-                <svg
-                  className="absolute right-1 top-2 w-4 h-4 text-gray-500 pointer-events-none"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-              <span className="text-gray-700 font-medium">data</span>
             </div>
           </div>
         </div>

@@ -81,9 +81,8 @@ export default function FormDataAset({ onSubmit, onCancel }) {
                      focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="">-- Pilih Kategori --</option>
-          <option value="Electronics">Electronics</option>
-          <option value="Furniture">Furniture</option>
-          <option value="Other">Other</option>
+          <option value="Electronics">Elektronik</option>
+          <option value="Furniture">Furnitur</option>
         </select>
       </div>
 

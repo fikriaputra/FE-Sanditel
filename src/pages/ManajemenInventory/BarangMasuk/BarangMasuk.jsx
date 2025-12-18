@@ -1,5 +1,4 @@
-// src/pages/ManajemenInventory/BarangMasuk/BarangMasuk.jsx
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../../layouts/MainLayout";
 import Table from "../../../components/ManajemenInventory/DataBarang/Table";
@@ -12,63 +11,152 @@ export default function BarangMasuk() {
 
   const pageTitle = "Daftar Barang Masuk";
 
+  // State
   const [search, setSearch] = useState("");
-  const [barangMasuk, setBarangMasuk] = useState([
-    {
-      no: 1,
-      noTransaksi: "T-BK-2508010001",
-      tglMasuk: "2025-08-01",
-      kategori: "Elektronik",
-      namaBarang: "AC",
-      jumlahMasuk: "20",
-      admin: "Kevin",
-    },
-    {
-      no: 2,
-      noTransaksi: "T-BK-2508010002",
-      tglMasuk: "2025-08-01",
-      kategori: "Komputer",
-      namaBarang: "Laptop",
-      jumlahMasuk: "15",
-      admin: "Sarah",
-    },
-    {
-      no: 3,
-      noTransaksi: "T-BK-2508020003",
-      tglMasuk: "2025-08-02",
-      kategori: "Elektronik",
-      namaBarang: "Printer",
-      jumlahMasuk: "10",
-      admin: "Andi",
-    },
-    {
-      no: 4,
-      noTransaksi: "T-BK-2508020004",
-      tglMasuk: "2025-08-02",
-      kategori: "Aksesoris",
-      namaBarang: "Mouse Wireless",
-      jumlahMasuk: "50",
-      admin: "Dewi",
-    },
-    {
-      no: 5,
-      noTransaksi: "T-BK-2508030005",
-      tglMasuk: "2025-08-02",
-      kategori: "Furniture",
-      namaBarang: "Meja Kantor",
-      jumlahMasuk: "8",
-      admin: "Rudi",
-    },
-  ]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    kategori: [],
+    namaBarang: [],
+  });
 
-  // Filter berdasarkan pencarian
-  const filteredData = useMemo(() => {
-    return barangMasuk.filter((item) =>
-      Object.values(item).join(" ").toLowerCase().includes(search.toLowerCase())
+  // ✅ HAPUS DUMMY -> ambil dari BE
+  const [barangMasuk, setBarangMasuk] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const headers = [
+    "No",
+    "No Transaksi",
+    "Tgl Masuk",
+    "Kategori",
+    "Nama Barang",
+    "Jumlah Masuk",
+    "Admin",
+    "Aksi",
+  ];
+
+  // Token (samain seperti halaman lain)
+  const token = localStorage.getItem("token");
+
+  // ✅ FETCH dari BE
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchBarangMasuk = async () => {
+      if (!token) {
+        console.error("Token is missing");
+        setBarangMasuk([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await fetch(
+          "https://jungly-lathery-justin.ngrok-free.dev/api/barang-masuk",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "ngrok-skip-browser-warning": "true",
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            signal: controller.signal,
+          }
+        );
+
+        const json = await res.json().catch(() => null);
+
+        // Kalau BE error, anggap data kosong (tapi tetap log buat debug)
+        if (!res.ok) {
+          console.error("BE error:", json);
+          setBarangMasuk([]);
+          return;
+        }
+
+        // BE bisa balikin: array langsung atau { data: [...] }
+        const rows = Array.isArray(json) ? json : json?.data ?? [];
+
+        // Normalisasi field biar struktur UI kamu tetap sama
+        const normalized = (rows || []).map((it, idx) => ({
+          no: it.no ?? it.id ?? idx + 1,
+          noTransaksi: it.noTransaksi ?? it.no_transaksi ?? it.kode_transaksi ?? "",
+          tglMasuk: it.tglMasuk ?? it.tgl_masuk ?? it.tanggal_masuk ?? "",
+          kategori: it.kategori ?? it.category ?? "",
+          namaBarang: it.namaBarang ?? it.nama_barang ?? "",
+          jumlahMasuk: it.jumlahMasuk ?? it.jumlah_masuk ?? it.qty ?? "",
+          admin: it.admin ?? it.created_by ?? it.user ?? "",
+        }));
+
+        setBarangMasuk(normalized);
+      } catch (err) {
+        if (err?.name !== "AbortError") console.error("Error fetching:", err);
+        setBarangMasuk([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBarangMasuk();
+    return () => controller.abort();
+  }, [token]);
+
+  // ✅ custom filter options diambil dari data BE (bukan dummy list)
+  const kategoriOptions = useMemo(() => {
+    return Array.from(
+      new Set((barangMasuk || []).map((x) => x.kategori).filter(Boolean))
     );
-  }, [barangMasuk, search]);
+  }, [barangMasuk]);
 
-  // Fungsi hapus
+  const namaBarangOptions = useMemo(() => {
+    return Array.from(
+      new Set((barangMasuk || []).map((x) => x.namaBarang).filter(Boolean))
+    );
+  }, [barangMasuk]);
+
+  // Definisikan custom filters untuk Table
+  const customFilters = [
+    {
+      name: "kategori",
+      label: "Kategori",
+      options: kategoriOptions,
+    },
+    {
+      name: "namaBarang",
+      label: "Nama Barang",
+      options: namaBarangOptions,
+    },
+  ];
+
+  // Filter pencarian dan filter berdasarkan kategori
+  const filteredData = useMemo(() => {
+    let filtered = barangMasuk.filter((item) => {
+      const searchMatch = Object.values(item)
+        .join(" ")
+        .toLowerCase()
+        .includes(search.toLowerCase());
+      return searchMatch;
+    });
+
+    // Apply kategori filter
+    if (filters.kategori.length > 0) {
+      filtered = filtered.filter((item) =>
+        filters.kategori.includes(item.kategori)
+      );
+    }
+
+    // Apply namaBarang filter
+    if (filters.namaBarang.length > 0) {
+      filtered = filtered.filter((item) =>
+        filters.namaBarang.includes(item.namaBarang)
+      );
+    }
+
+    return filtered;
+  }, [barangMasuk, search, filters]);
+
+  // Handlers
+  const handlePrint = () => window.print();
+
   const handleDelete = (no) => {
     const confirmDelete = window.confirm("Yakin ingin menghapus data ini?");
     if (confirmDelete) {
@@ -76,7 +164,21 @@ export default function BarangMasuk() {
     }
   };
 
-  const handlePrint = () => window.print();
+  // ✅ FIX TYPO handleFilterChange (yang sebelumnya bikin error)
+  const handleFilterChange = (filterName, value) => {
+    setFilters((prevFilters) => {
+      const updatedFilters = { ...prevFilters };
+      const selectedFilter = updatedFilters[filterName];
+      if (selectedFilter.includes(value)) {
+        updatedFilters[filterName] = selectedFilter.filter(
+          (item) => item !== value
+        );
+      } else {
+        updatedFilters[filterName] = [...selectedFilter, value];
+      }
+      return updatedFilters;
+    });
+  };
 
   return (
     <MainLayout>
@@ -129,9 +231,69 @@ export default function BarangMasuk() {
           </svg>
         </div>
 
+        {/* Filter Mobile */}
+        <div className="sm:hidden mb-4">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white flex items-center gap-2"
+            >
+              Filter
+              <span className="text-xs">▼</span>
+            </button>
+
+            {isFilterOpen && (
+              <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
+                <div className="mb-2 text-sm font-semibold text-gray-700">
+                  Filter
+                </div>
+                {customFilters.map((filter) => (
+                  <div
+                    key={filter.name}
+                    className="border border-gray-200 rounded-lg p-3 mb-3"
+                  >
+                    <div className="text-xs font-semibold text-gray-700 mb-2">
+                      {filter.label}
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {filter.options.map((opt) => (
+                        <label
+                          key={opt}
+                          className="flex items-center gap-2 text-xs mb-1 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filters[filter.name]?.includes(opt)}
+                            onChange={() => handleFilterChange(filter.name, opt)}
+                            className="rounded border-gray-300"
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)}
+                    className="px-4 py-1.5 text-xs rounded-lg bg-blue-500 text-white font-medium"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Card View (Mobile) */}
         <div className="sm:hidden space-y-3">
-          {filteredData.length > 0 ? (
+          {loading ? (
+            <p className="text-center py-4 text-gray-500 italic">Loading...</p>
+          ) : filteredData.length > 0 ? (
             filteredData.map((item) => (
               <div
                 key={item.no}
@@ -149,16 +311,13 @@ export default function BarangMasuk() {
                   <span className="font-medium">{item.noTransaksi}</span>
                 </p>
                 <p className="text-sm text-gray-600">
-                  Tgl Masuk:{" "}
-                  <span className="font-medium">{item.tglMasuk}</span>
+                  Tgl Masuk: <span className="font-medium">{item.tglMasuk}</span>
                 </p>
                 <p className="text-sm text-gray-600">
-                  Kategori:{" "}
-                  <span className="font-medium">{item.kategori}</span>
+                  Kategori: <span className="font-medium">{item.kategori}</span>
                 </p>
                 <p className="text-sm text-gray-600">
-                  Jumlah:{" "}
-                  <span className="font-medium">{item.jumlahMasuk}</span>
+                  Jumlah: <span className="font-medium">{item.jumlahMasuk}</span>
                 </p>
                 <p className="text-sm text-gray-600">
                   Admin: <span className="font-medium">{item.admin}</span>
@@ -190,18 +349,21 @@ export default function BarangMasuk() {
         {/* Table (Desktop) */}
         <div className="hidden sm:block overflow-x-auto">
           <Table
-            headers={[
-              "No",
-              "No Transaksi",
-              "Tgl Masuk",
-              "Kategori",
-              "Nama Barang",
-              "Jumlah Masuk",
-              "Admin",
-              "Aksi",
-            ]}
+            headers={headers}
+            search={search}
+            setSearch={setSearch}
+            customFilters={customFilters}
           >
-            {filteredData.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td
+                  colSpan={headers.length}
+                  className="text-center py-4 text-gray-500 italic"
+                >
+                  Loading...
+                </td>
+              </tr>
+            ) : filteredData.length > 0 ? (
               filteredData.map((item) => (
                 <TableRowBM
                   key={item.no}
@@ -214,7 +376,7 @@ export default function BarangMasuk() {
             ) : (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={headers.length}
                   className="text-center py-4 text-gray-500 italic"
                 >
                   Data Kosong Tidak Tersedia
@@ -225,7 +387,7 @@ export default function BarangMasuk() {
         </div>
       </div>
 
-      {/* 🔹 Tabel khusus CETAK: pakai komponen PrintTable */}
+      {/* Tabel khusus CETAK */}
       <PrintTable
         printId="print-barang-masuk"
         title={pageTitle}

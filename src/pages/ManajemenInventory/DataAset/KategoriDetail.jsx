@@ -97,7 +97,7 @@ export default function KategoriDetail() {
             ))}
           </div>
 
-          {/* ✅ Table View (Desktop Only) */}
+          {/* ✅ Table View (Desktop Only) - 🔹 Tanpa Filter */}
           <div className="hidden sm:block overflow-x-auto">
             <Table
               headers={[
@@ -110,6 +110,7 @@ export default function KategoriDetail() {
                 "Aksi",
               ]}
               pagination={false}
+              showFilter={false} // 🔹 Menyembunyikan filter
             >
               {dataAset.map((item, index) => (
                 <TableRowKD

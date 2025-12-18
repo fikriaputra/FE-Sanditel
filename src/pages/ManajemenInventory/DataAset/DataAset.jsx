@@ -1,26 +1,18 @@
 // src/pages/DataAset.jsx
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../../layouts/MainLayout";
 import Table from "../../../components/ManajemenInventory/DataBarang/Table";
 import TableRowDA from "../../../components/ManajemenInventory/DataAset/TableRowDA";
-import { Filter, Barcode, Plus, Pencil, Trash2, QrCode } from "lucide-react";
+import { Tags, Barcode, Plus, Pencil, Trash2, QrCode } from "lucide-react";
 
 export default function DataAset() {
   const navigate = useNavigate();
 
-  const [assets, setAssets] = useState([
-    { number: 1, name: "Laptop Dell", brandCode: "Dell-LT-001", category: "Elektronik", status: "Aktif", barcodeLog: "2025-08-01" },
-    { number: 2, name: "Projector Epson", brandCode: "Epson-PR-002", category: "Elektronik", status: "Tidak Aktif", barcodeLog: "2025-07-25" },
-    { number: 3, name: "Kursi Kantor Ergo", brandCode: "Ergo-CH-003", category: "Furnitur", status: "Aktif", barcodeLog: "2025-07-20" },
-    { number: 4, name: "Meja Rapat", brandCode: "IKEA-DS-004", category: "Furnitur", status: "Aktif", barcodeLog: "2025-08-02" },
-    { number: 5, name: "Printer HP", brandCode: "HP-PR-005", category: "Elektronik", status: "Aktif", barcodeLog: "2025-07-15" },
-    { number: 6, name: "Scanner Canon", brandCode: "Canon-SC-006", category: "Elektronik", status: "Tidak Aktif", barcodeLog: "2025-07-10" },
-    { number: 7, name: "Meja Konferensi", brandCode: "IKEA-TB-007", category: "Furnitur", status: "Aktif", barcodeLog: "2025-08-05" },
-    { number: 8, name: "Papan Tulis", brandCode: "WB-008", category: "Furnitur", status: "Aktif", barcodeLog: "2025-08-03" },
-    { number: 9, name: "AC", brandCode: "LG-AC-009", category: "Elektronik", status: "Tidak Aktif", barcodeLog: "2025-07-30" },
-    { number: 10, name: "Kamera CCTV", brandCode: "Hikvision-CC-010", category: "Elektronik", status: "Aktif", barcodeLog: "2025-08-04" },
-  ]);
+  // 🔥 Hapus dummy, isi dari BE
+  const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortCategory] = useState(null);
@@ -29,6 +21,86 @@ export default function DataAset() {
     category: [],
     status: [],
   });
+
+  // Ambil token dari localStorage (samakan dengan DataBarang kamu)
+  const token = localStorage.getItem("token");
+
+  // ✅ Fetch data aset dari BE
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchAssets = async () => {
+      if (!token) {
+        setError("Token is missing");
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+
+      try {
+        const res = await fetch(
+          "https://jungly-lathery-justin.ngrok-free.dev/api/data-aset",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "ngrok-skip-browser-warning": "true",
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            signal: controller.signal,
+          }
+        );
+
+        const json = await res.json().catch(() => null);
+
+if (!res.ok) {
+  console.error("BE error:", json);  // tetap kelihatan di console untuk debug
+  setAssets([]);                     // anggap data kosong
+  setError("");                      // jangan tampilkan error di UI
+  return;
+}
+
+
+        // BE bisa mengembalikan: array langsung atau {data:[...]}
+        const rows = Array.isArray(json) ? json : json?.data ?? json?.assets ?? [];
+
+        // Normalisasi field biar struktur UI kamu tetap sama (number, name, brandCode, category, status, barcodeLog)
+        const normalized = (rows || []).map((it, idx) => ({
+          number: it.number ?? it.no ?? it.nomor ?? it.id ?? idx + 1,
+          name: it.name ?? it.nama_aset ?? it.nama_asset ?? it.nama ?? "",
+          brandCode:
+            it.brandCode ??
+            it.brand_code ??
+            it.kode_merk ??
+            it.merk_kode ??
+            it.merk ??
+            "",
+          category: it.category ?? it.kategori ?? "",
+          status: it.status ?? it.status_aset ?? "",
+          barcodeLog:
+            it.barcodeLog ??
+            it.barcode_log ??
+            it.log_barcode ??
+            it.updated_at ??
+            it.created_at ??
+            "",
+        }));
+
+        setAssets(normalized);
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          setError(e.message || "Gagal mengambil data aset");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssets();
+    return () => controller.abort();
+  }, [token]);
 
   // Definisikan custom filters
   const customFilters = [
@@ -53,8 +125,8 @@ export default function DataAset() {
   const filteredAssets = useMemo(() => {
     let filtered = assets.filter(
       (item) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.brandCode.toLowerCase().includes(searchTerm.toLowerCase())
+        (item.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.brandCode || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     // Apply sortCategory (tombol Sortir Kategori - fungsi berbeda)
@@ -64,7 +136,9 @@ export default function DataAset() {
 
     // Apply category filter (dari dropdown filter)
     if (filters.category.length > 0) {
-      filtered = filtered.filter((item) => filters.category.includes(item.category));
+      filtered = filtered.filter((item) =>
+        filters.category.includes(item.category)
+      );
     }
 
     // Apply status filter
@@ -91,7 +165,7 @@ export default function DataAset() {
     });
   };
 
-  // Hapus aset dari state
+  // Hapus aset dari state (kalau mau delete ke BE, nanti tinggal ganti pakai fetch DELETE)
   const handleDelete = (number) => {
     if (window.confirm("Yakin ingin menghapus aset ini?")) {
       setAssets((prev) => prev.filter((item) => item.number !== number));
@@ -123,8 +197,8 @@ export default function DataAset() {
               className="flex items-center justify-center bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded shadow transition w-10 h-10 sm:w-auto sm:h-auto"
               title="Sortir berdasarkan kategori"
             >
-              <Filter size={18} />
-              <span className="hidden sm:inline ml-1">Sortir Kategori</span>
+              <Tags size={18} />
+              <span className="hidden sm:inline ml-1">Kategori</span>
             </button>
 
             {/* Scan Barcode */}
@@ -177,9 +251,14 @@ export default function DataAset() {
 
             {isFilterOpen && (
               <div className="absolute mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
-                <div className="mb-2 text-sm font-semibold text-gray-700">Filter</div>
+                <div className="mb-2 text-sm font-semibold text-gray-700">
+                  Filter
+                </div>
                 {customFilters.map((filter) => (
-                  <div key={filter.name} className="border border-gray-200 rounded-lg p-3 mb-3">
+                  <div
+                    key={filter.name}
+                    className="border border-gray-200 rounded-lg p-3 mb-3"
+                  >
                     <div className="text-xs font-semibold text-gray-700 mb-2">
                       {filter.label}
                     </div>
@@ -192,7 +271,9 @@ export default function DataAset() {
                           <input
                             type="checkbox"
                             checked={filters[filter.name]?.includes(opt)}
-                            onChange={() => handleFilterChange(filter.name, opt)}
+                            onChange={() =>
+                              handleFilterChange(filter.name, opt)
+                            }
                             className="rounded border-gray-300"
                           />
                           {opt}
@@ -218,7 +299,9 @@ export default function DataAset() {
 
         {/* Mobile Card View */}
         <div className="sm:hidden space-y-3">
-          {filteredAssets.length > 0 ? (
+          {loading ? (
+  <p className="text-center py-4 text-gray-500 italic">Loading...</p>
+) : filteredAssets.length > 0 ? (
             filteredAssets.map((item) => (
               <div
                 key={item.number}
@@ -226,7 +309,9 @@ export default function DataAset() {
               >
                 <div className="flex justify-between items-center">
                   <h3 className="font-semibold text-gray-800">{item.name}</h3>
-                  <span className={getStatusBadge(item.status)}>{item.status}</span>
+                  <span className={getStatusBadge(item.status)}>
+                    {item.status}
+                  </span>
                 </div>
                 <p className="text-sm text-gray-600">
                   <span className="font-medium">Merk/Kode:</span> {item.brandCode}
@@ -284,7 +369,19 @@ export default function DataAset() {
             ]}
             customFilters={customFilters}
           >
-            {filteredAssets.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="7" className="text-center p-4 text-gray-500 italic">
+                  Loading...
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan="7" className="text-center p-4 text-red-500 italic">
+                  {error}
+                </td>
+              </tr>
+            ) : filteredAssets.length > 0 ? (
               filteredAssets.map((item) => (
                 <TableRowDA
                   key={item.number}

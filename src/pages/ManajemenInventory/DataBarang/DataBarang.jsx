@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../../layouts/MainLayout";
 import Table from "../../../components/ManajemenInventory/DataBarang/Table";
@@ -20,17 +20,42 @@ export default function DataBarang() {
     Satuan: [],
   });
 
-  const [dataBarang, setDataBarang] = useState([
-    { Number: 1, NamaBarang: "Laptop", JenisBarang: "Elektronik", Stok: 98, Satuan: "Unit" },
-    { Number: 2, NamaBarang: "Projector", JenisBarang: "Elektronik", Stok: 12, Satuan: "Unit" },
-    { Number: 3, NamaBarang: "Office Chair", JenisBarang: "Elektronik", Stok: 21, Satuan: "Pcs" },
-    { Number: 4, NamaBarang: "Desk", JenisBarang: "Perlengkapan Kantor", Stok: 23, Satuan: "Pcs" },
-    { Number: 5, NamaBarang: "Printer", JenisBarang: "Elektronik", Stok: 13, Satuan: "Unit" },
-    { Number: 6, NamaBarang: "Whiteboard", JenisBarang: "Perlengkapan Kantor", Stok: 15, Satuan: "Pcs" },
-    { Number: 7, NamaBarang: "Mouse Wireless", JenisBarang: "Perlengkapan Kantor", Stok: 50, Satuan: "Pcs" },
-  ]);
+  const [dataBarang, setDataBarang] = useState([]);
 
-  const headers = ["No", "Nama Barang", "Jenis Barang", "Stok", "Satuan", "Aksi"];
+  // Retrieve token (for example, from localStorage)
+  const token = localStorage.getItem("token"); // Assuming token is stored in localStorage
+
+  // Fetch data from API when the component mounts
+  useEffect(() => {
+    if (token) {
+      fetch("https://jungly-lathery-justin.ngrok-free.dev/api/data-barang", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "ngrok-skip-browser-warning": "true",
+          "Content-Type": "application/json",
+        },
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          // Only use the relevant data (excluding created_at and updated_at)
+          const filteredData = data.map((item) => ({
+            id: item.id,
+            kode_barang: item.kode_barang,
+            nama_barang: item.nama_barang,
+            jenis_barang: item.jenis_barang,
+            stok: item.stok,
+            satuan: item.satuan,
+          }));
+          setDataBarang(filteredData);
+        })
+        .catch((error) => console.error("Error fetching data:", error));
+    } else {
+      console.error("Token is missing");
+    }
+  }, [token]);
+
+  const headers = ["No", "Id Barang","Nama Barang", "Jenis Barang", "Stok", "Satuan", "Aksi"];
 
   // Definisikan custom filters untuk Table
   const customFilters = [

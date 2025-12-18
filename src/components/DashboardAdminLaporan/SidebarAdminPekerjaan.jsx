@@ -62,7 +62,7 @@ export default function SidebarAdminPekerjaan() {
         </div>
 
         {/* Tombol Kembali Mobile */}
-        {isOpen && (
+        {/* {isOpen && (
           <div className="lg:hidden p-4 border-b">
             <button
               className="flex items-center gap-2 text-gray-700 font-medium hover:text-blue-600 transition-colors"
@@ -75,7 +75,7 @@ export default function SidebarAdminPekerjaan() {
               <span>Kembali ke Menu</span>
             </button>
           </div>
-        )}
+        )} */}
 
         {/* Menu List */}
         <ul className="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-60px)]">
@@ -83,10 +83,10 @@ export default function SidebarAdminPekerjaan() {
             <li
               key={menu.path}
               className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors
-                ${location.pathname === menu.path ? "bg-blue-100 text-blue-600" : "hover:bg-blue-100"}`}  // 🔹 Menambahkan kelas CSS aktif
+                hover:bg-blue-100`}
               onClick={() => {
                 setIsOpen(false);
-                navigate(menu.path);
+                navigate(menu.path); // Fixed onClick event
               }}
             >
               {menu.icon}

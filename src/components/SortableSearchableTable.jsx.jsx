@@ -1,31 +1,62 @@
 // src/components/SortableSearchableTable.jsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 export default function SortableSearchableTable({ columns, data, renderRow }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+
+  // ✅ default sort: cari kolom "no" dulu, kalau tidak ada pakai kolom pertama
+  const [sortConfig, setSortConfig] = useState(() => {
+    const noKey =
+      columns?.find((c) => c.accessor?.toLowerCase() === "no")?.accessor ||
+      columns?.[0]?.accessor ||
+      null;
+
+    return { key: noKey, direction: "asc" };
+  });
+
+  // kalau columns baru ke-load belakangan
+  useEffect(() => {
+    if (!sortConfig.key && columns?.length) {
+      const noKey =
+        columns.find((c) => c.accessor?.toLowerCase() === "no")?.accessor ||
+        columns[0].accessor;
+
+      setSortConfig({ key: noKey, direction: "asc" });
+    }
+  }, [columns, sortConfig.key]);
 
   // Filtering
   const filteredData = useMemo(() => {
-    return data.filter((item) =>
+    return (data || []).filter((item) =>
       Object.values(item).some((val) =>
         String(val).toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
   }, [data, searchTerm]);
 
-  // Sorting
+  // Sorting (✅ numeric aware)
   const sortedData = useMemo(() => {
     if (!sortConfig.key) return filteredData;
 
     return [...filteredData].sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
-        return sortConfig.direction === "asc" ? -1 : 1;
+      const aVal = a?.[sortConfig.key];
+      const bVal = b?.[sortConfig.key];
+
+      const aNum = Number(aVal);
+      const bNum = Number(bVal);
+
+      const bothNumeric = !Number.isNaN(aNum) && !Number.isNaN(bNum);
+
+      if (bothNumeric) {
+        return sortConfig.direction === "asc" ? aNum - bNum : bNum - aNum;
       }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
-        return sortConfig.direction === "asc" ? 1 : -1;
-      }
-      return 0;
+
+      // fallback string compare
+      const aStr = String(aVal ?? "");
+      const bStr = String(bVal ?? "");
+      const cmp = aStr.localeCompare(bStr, undefined, { numeric: true, sensitivity: "base" });
+
+      return sortConfig.direction === "asc" ? cmp : -cmp;
     });
   }, [filteredData, sortConfig]);
 
@@ -59,9 +90,7 @@ export default function SortableSearchableTable({ columns, data, renderRow }) {
               {columns.map((col) => (
                 <th
                   key={col.accessor}
-                  className={`p-3 text-left ${
-                    col.sortable ? "cursor-pointer select-none" : ""
-                  }`}
+                  className={`p-3 text-left ${col.sortable ? "cursor-pointer select-none" : ""}`}
                   onClick={() => col.sortable && requestSort(col.accessor)}
                 >
                   {col.title}
@@ -72,9 +101,7 @@ export default function SortableSearchableTable({ columns, data, renderRow }) {
             </tr>
           </thead>
 
-          <tbody>
-            {sortedData.map((row, idx) => renderRow(row, idx))}
-          </tbody>
+          <tbody>{sortedData.map((row, idx) => renderRow(row, idx))}</tbody>
         </table>
       </div>
     </div>

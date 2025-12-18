@@ -56,25 +56,35 @@ export default function MenuComp({
       <div className="relative z-10 w-full max-w-6xl mt-12">
         {/* Header */}
         <motion.div
-          className="text-center mb-12"
+          className="flex items-center justify-center gap-4 mb-12"
           initial={{ opacity: 0, y: -40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
         >
-          <div className="flex items-center justify-center gap-4">
-            <img
-              src="/Biro-Umum-Setda-Jabar.png"
-              alt="Logo"
-              className="w-20 h-20 md:w-16 md:h-16"
-            />
-            <div className="flex flex-col items-start text-left">
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
-                <span className="text-black-600">SANDITEL APPS</span>
-              </h1>
-              <p className="mt-1 text-sm md:text-base text-black-500">
-                Sistem terpadu manajemen & dokumentasi
-              </p>
-            </div>
+          {/* Image and Text side by side */}
+          <img
+            src="/Biro-Umum-Setda-Jabar.png"
+            alt="Logo"
+            className="w-24 h-24 md:w-16 md:h-16"
+          />
+          <div className="flex flex-col items-start text-left">
+            {/* Animated Text with Typewriter effect */}
+            <motion.h1
+              className="text-3xl md:text-4xl font-bold text-gray-800 typewriter"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, ease: "easeOut" }}
+            >
+              <span className="text-black-600">SANDITEL APPS</span>
+            </motion.h1>
+            <motion.p
+              className="mt-1 text-sm md:text-base text-black-500 typewriter-text"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
+            >
+              Sistem Terpadu Manajemen & Dokumentasi Pekerjaan
+            </motion.p>
           </div>
         </motion.div>
 

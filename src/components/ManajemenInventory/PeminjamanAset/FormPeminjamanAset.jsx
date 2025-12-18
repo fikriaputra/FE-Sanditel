@@ -2,7 +2,7 @@ import { useState } from "react";
 
 export default function FormPeminjamanAset({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    barang: "",
+    aset: "",
     peminjam: "",
     bagian: "",       // ✅ Tambahan field Bagian
     tanggalPinjam: "",
@@ -21,7 +21,7 @@ export default function FormPeminjamanAset({ onSubmit, onCancel }) {
 
   const handleReset = () => {
     setFormData({
-      barang: "",
+      aset: "",
       peminjam: "",
       bagian: "",       // ✅ Reset juga
       tanggalPinjam: "",
@@ -45,17 +45,17 @@ export default function FormPeminjamanAset({ onSubmit, onCancel }) {
         Form Peminjaman Aset
       </h2>
 
-      {/* Nama Barang */}
+      {/* Nama Aset */}
       <div className="mb-4">
         <label className="block font-medium mb-1 text-sm sm:text-base">
-          Nama Barang
+          Nama Aset
         </label>
         <input
           type="text"
-          name="barang"
-          value={formData.barang}
+          name="aset"
+          value={formData.aset}
           onChange={handleChange}
-          placeholder="Nama barang..."
+          placeholder="Nama aset..."
           className="w-full border rounded-lg px-3 py-2 text-sm sm:text-base"
         />
       </div>
@@ -128,7 +128,7 @@ export default function FormPeminjamanAset({ onSubmit, onCancel }) {
           name="jumlah"
           value={formData.jumlah}
           onChange={handleChange}
-          placeholder="Jumlah barang dipinjam..."
+          placeholder="Jumlah aset dipinjam..."
           className="w-full border rounded-lg px-3 py-2 text-sm sm:text-base"
         />
       </div>

@@ -1,9 +1,8 @@
-// src/components/FormDataBarang.jsx
 import { useState, useEffect } from "react";
 
 export default function FormDataBarang({ onSubmit, onCancel, initialData, hideReset }) {
   const [formData, setFormData] = useState({
-    idBarang: "B000008",
+    idBarang: "B000010",
     namaBarang: "",
     jenisBarang: "",
     satuanBarang: "",
@@ -20,7 +19,8 @@ export default function FormDataBarang({ onSubmit, onCancel, initialData, hideRe
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+};
+
 
   const handleReset = () => {
     if (initialData) {
@@ -32,15 +32,45 @@ export default function FormDataBarang({ onSubmit, onCancel, initialData, hideRe
         jenisBarang: "",
         satuanBarang: "",
         stok: "",
-        harga: "",
       });
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  const token = "5|DcKSYbWNiuy3b3FMnUbZGvL5ibgkAz8L5EKGg4sye58d8d70";
+
+  const payload = {
+    idBarang: formData.idBarang,
+    namaBarang: formData.namaBarang,
+    jenisBarang: formData.jenisBarang,
+    satuanBarang: formData.satuanBarang,
+    stok: Number(formData.stok),
   };
+
+  try {
+    const res = await fetch("https://jungly-lathery-justin.ngrok-free.dev/api/data-barang", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw data;
+
+    onSubmit?.(data);
+  } catch (err) {
+    console.error("POST gagal:", err);
+    alert(err?.message || "Gagal menyimpan data");
+  }
+};
+
+
 
   return (
     <form
@@ -86,10 +116,9 @@ export default function FormDataBarang({ onSubmit, onCancel, initialData, hideRe
           className="w-full border rounded-lg px-3 py-2 text-sm sm:text-base"
         >
           <option value="">-- Pilih Jenis Barang --</option>
+          <option value="Alat">Alat</option>
           <option value="Elektronik">Elektronik</option>
           <option value="Perlengkapan Kantor">Perlengkapan Kantor</option>
-          <option value="Alat">Alat</option>
-          <option value="Bahan">Bahan</option>
         </select>
       </div>
 
@@ -104,9 +133,8 @@ export default function FormDataBarang({ onSubmit, onCancel, initialData, hideRe
         >
           <option value="">-- Pilih Satuan --</option>
           <option value="Unit">Unit</option>
-          <option value="PCS">Pcs</option>
+          <option value="Pcs">Pcs</option>
           <option value="Box">Box</option>
-          <option value="Kg">Kg</option>
         </select>
       </div>
 

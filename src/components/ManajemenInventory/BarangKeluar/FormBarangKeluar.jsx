@@ -1,5 +1,5 @@
 // src/components/FormBarangKeluar.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function FormBarangKeluar({ initialData, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(
@@ -14,26 +14,79 @@ export default function FormBarangKeluar({ initialData, onSubmit, onCancel }) {
     }
   );
 
+  // kalau edit, biar form keisi
+  useEffect(() => {
+    if (initialData) setFormData(initialData);
+  }, [initialData]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
+  const handleReset = () => {
+    setFormData(
+      initialData || {
+        noTransaksi: "T-BK-2508010001",
+        tglKeluar: "",
+        namaBarang: "",
+        namaPenerima: "",
+        bagian: "",
+        totalKeluar: "",
+        petugas: "",
+      }
+    );
   };
 
-  const handleReset = () => {
-    setFormData({
-      noTransaksi: "T-BK-2508010001",
-      tglKeluar: "",
-      namaBarang: "",
-      namaPenerima: "",
-      bagian: "",
-      totalKeluar: "",
-      petugas: "",
-    });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // body sesuai yang kamu minta
+  const requestBody = {
+  tglKeluar: formData.tglKeluar,
+  barang_id: Number(formData.barangId),   // <- dari dropdown barang
+  namaPenerima: formData.namaPenerima,
+  bagian: formData.bagian,
+  totalKeluar: Number(formData.totalKeluar),
+  petugas: formData.petugas,
+};
+
+
+    const token = localStorage.getItem("token"); // rekomendasi: simpan token login di sini
+
+    try {
+      const res = await fetch(
+        "https://jungly-lathery-justin.ngrok-free.dev/api/barang-keluar",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        const msg =
+          json?.message ||
+          (json?.errors
+            ? Object.values(json.errors).flat().join(", ")
+            : `Gagal menyimpan (HTTP ${res.status})`);
+        alert(msg);
+        return;
+      }
+
+      alert("Barang keluar berhasil disimpan!");
+      onSubmit?.(json); // supaya parent bisa refresh tabel / close modal
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan jaringan / CORS. Coba lagi.");
+    }
   };
 
   return (
@@ -45,13 +98,9 @@ export default function FormBarangKeluar({ initialData, onSubmit, onCancel }) {
         Form Tambah Barang Keluar
       </h2>
 
-      {/* Input Fields */}
       <div className="space-y-4">
-        {/* No Transaksi */}
         <div>
-          <label className="block text-sm font-medium mb-1">
-            No Transaksi
-          </label>
+          <label className="block text-sm font-medium mb-1">No Transaksi</label>
           <input
             type="text"
             name="noTransaksi"
@@ -61,25 +110,20 @@ export default function FormBarangKeluar({ initialData, onSubmit, onCancel }) {
           />
         </div>
 
-        {/* Tanggal Keluar */}
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Tanggal Keluar
-          </label>
+          <label className="block text-sm font-medium mb-1">Tanggal Keluar</label>
           <input
             type="date"
             name="tglKeluar"
             value={formData.tglKeluar}
             onChange={handleChange}
             className="w-full border rounded-lg px-3 py-2"
+            required
           />
         </div>
 
-        {/* Nama Barang */}
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Nama Barang
-          </label>
+          <label className="block text-sm font-medium mb-1">Nama Barang</label>
           <input
             type="text"
             name="namaBarang"
@@ -87,14 +131,12 @@ export default function FormBarangKeluar({ initialData, onSubmit, onCancel }) {
             onChange={handleChange}
             placeholder="Masukkan nama barang"
             className="w-full border rounded-lg px-3 py-2"
+            required
           />
         </div>
 
-        {/* Nama Penerima */}
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Nama Penerima
-          </label>
+          <label className="block text-sm font-medium mb-1">Nama Penerima</label>
           <input
             type="text"
             name="namaPenerima"
@@ -102,14 +144,12 @@ export default function FormBarangKeluar({ initialData, onSubmit, onCancel }) {
             onChange={handleChange}
             placeholder="Masukkan nama penerima"
             className="w-full border rounded-lg px-3 py-2"
+            required
           />
         </div>
 
-        {/* Bagian */}
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Bagian
-          </label>
+          <label className="block text-sm font-medium mb-1">Bagian</label>
           <input
             type="text"
             name="bagian"
@@ -117,14 +157,12 @@ export default function FormBarangKeluar({ initialData, onSubmit, onCancel }) {
             onChange={handleChange}
             placeholder="Masukkan bagian penerima"
             className="w-full border rounded-lg px-3 py-2"
+            required
           />
         </div>
 
-        {/* Total Keluar */}
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Total Keluar
-          </label>
+          <label className="block text-sm font-medium mb-1">Total Keluar</label>
           <input
             type="number"
             name="totalKeluar"
@@ -132,14 +170,13 @@ export default function FormBarangKeluar({ initialData, onSubmit, onCancel }) {
             onChange={handleChange}
             placeholder="Masukkan jumlah barang keluar"
             className="w-full border rounded-lg px-3 py-2"
+            required
+            min="1"
           />
         </div>
 
-        {/* Petugas */}
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Petugas
-          </label>
+          <label className="block text-sm font-medium mb-1">Petugas</label>
           <input
             type="text"
             name="petugas"
@@ -147,11 +184,11 @@ export default function FormBarangKeluar({ initialData, onSubmit, onCancel }) {
             onChange={handleChange}
             placeholder="Masukkan nama petugas"
             className="w-full border rounded-lg px-3 py-2"
+            required
           />
         </div>
       </div>
 
-      {/* Tombol Aksi */}
       <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4">
         <button
           type="button"

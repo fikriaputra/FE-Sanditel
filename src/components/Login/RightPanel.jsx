@@ -3,7 +3,6 @@ const RightPanel = () => {
     <div className="hidden md:flex w-1/2 bg-indigo-600 text-white items-center justify-center p-8 lg:p-10 relative rounded-l-[2rem] transition-all">
       {/* Kontak */}
       <div className="absolute top-4 right-4 text-xs lg:text-sm text-white">
-        📞 +62 0116 789 754
       </div>
 
       {/* Konten utama */}

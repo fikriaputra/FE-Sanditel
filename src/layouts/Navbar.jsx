@@ -34,7 +34,7 @@ export default function Navbar({ toggleSidebar }) {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    navigate("/login");
+    navigate("/menu");
   };
 
   // Tutup dropdown kalau klik di luar

@@ -32,52 +32,89 @@ export default function LoginPage() {
   const redirectTo =
     location.state?.redirectTo || redirectMap[menuId] || "/menu";
 
-  const handleLogin = (data) => {
-    if (data.error) {
-      setError(data.error);
+const handleLogin = async (data) => {
+  if (data.error) {
+    setError(data.error);
+    return;
+  }
+
+  setError("");
+  setLoading(true);
+
+  try {
+    const response = await fetch(
+      "https://jungly-lathery-justin.ngrok-free.dev/api/login",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email, password: data.password }),
+      }
+    );
+
+    const result = await response.json();
+
+    const message = result.message?.toLowerCase() ?? "";
+    if (
+      message.includes("not") ||
+      message.includes("match") ||
+      message.includes("invalid") ||
+      message.includes("record")
+    ) {
+      setError("Akun belum terdaftar. Silakan register terlebih dahulu.");
+      setLoading(false);
       return;
     }
 
-    setError("");
-    setLoading(true);
-
-    setTimeout(() => {
+    if (!response.ok || !result.success) {
+      setError(result.message || "Login gagal. Cek email & password.");
       setLoading(false);
+      return;
+    }
 
-      console.log("Login data:", data);
-      console.log("menuId:", menuId);
+    // ✔ LOGIN SUKSES
+    localStorage.setItem("token", result.access_token);
+    localStorage.setItem("user", JSON.stringify(result.user));
 
-      if (menuId === 1) {
-        console.log("Login untuk Manajemen Inventaris");
-      } else if (menuId === 2) {
-        console.log("Login untuk Laporan Harian Pekerjaan");
-      // } else if (menuId === 3) {
-      //   console.log("Login untuk Monitoring Perangkat");
-      // } else if (menuId === 4) {
-      //   console.log("Login untuk Dokumentasi Jaringan");
+    const role = result.user.role;
+
+    setLoading(false);
+
+    // 🔥 REDIRECT SESUAI URL PARAM & ROLE
+    if (menuId === 2) {
+      // login/1
+      if (role === "admin") {
+        navigate("/admin-dashboard-pekerjaan", { replace: true });
       } else {
-        console.log("Login langsung (tanpa pilih menu dulu)");
+        navigate("/dashboard-laporan", { replace: true });
       }
+    } else if (menuId === 1) {
+      // login/2
+      navigate("/dashboard", { replace: true });
+    } else {
+      // fallback
+      navigate("/menu", { replace: true });
+    }
 
-      // Setelah login, redirect sesuai tujuan
-      navigate(redirectTo, { replace: true });
-    }, 1500);
-  };
+  } catch (err) {
+    console.error(err);
+    setError("Terjadi kesalahan. Periksa koneksi internet.");
+    setLoading(false);
+  }
+};
+    return (
+      <div className="min-h-screen flex flex-col md:flex-row">
+        <Logo />
 
-  return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      <Logo />
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10">
+          <LoginForm
+            onLogin={handleLogin}
+            loading={loading}
+            error={error}
+            goRegister={() => navigate(`/register/${menuId}`)} // Fixed error: removed the comment inside JSX
+          />
+        </div>
 
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10">
-        <LoginForm
-          onLogin={handleLogin}
-          loading={loading}
-          error={error}
-          goRegister={() => navigate(`/register/${menuId}`)} // Fixed error: removed the comment inside JSX
-        />
+        <RightPanel />
       </div>
-
-      <RightPanel />
-    </div>
-  );
-}
+    );
+  }

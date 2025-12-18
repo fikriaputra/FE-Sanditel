@@ -16,24 +16,16 @@ const LoginForm = ({ onLogin, loading, error, goRegister }) => {
   const [password, setPassword] = useState("");
 
   const handleLogin = () => {
-    if (!email || !password) {
-      return onLogin({ error: "Email dan password wajib diisi !!" });
-    }
+  if (!email || !password) {
+    return onLogin({ error: "Email dan password wajib diisi !!" });
+  }
 
-    // Call onLogin function with email and password
-    onLogin({ email, password });
+  // CUKUP panggil login
+  onLogin({ email, password });
 
-    // Redirect to the appropriate page after login
-    const redirectMap = {
-      1: "/dashboard", // Menu 1 redirects to dashboard
-      2: "/dashboard-laporan", // Menu 2 redirects to dashboard-laporan
-      // Add other menu options here
-    };
+  // ❗ Jangan redirect dari sini
+};
 
-    const redirectTo = redirectMap[menuId] || "/menu"; // Default to /menu if no match
-
-    navigate(redirectTo, { replace: true }); // Redirect after login
-  };
 
   return (
     <motion.div
